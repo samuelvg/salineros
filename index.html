@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Los Salineros</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "dexie": "https://cdn.jsdelivr.net/npm/dexie@3.2.2/dist/dexie.mjs"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Título de la app -->
+  <h1 class="app-title">LOS SALINEROS</h1>
+
+  <!-- Filtro por etiquetas -->
+  <div id="filter-container"></div>
+
+  <!-- Contenedor principal de la app -->
+  <div id="app"></div>
+
+  <!-- Barra de estado online/offline y sincronización -->
+  <div id="status-bar"></div>
+
+  <!-- Bundle de la aplicación -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
