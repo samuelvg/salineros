@@ -319,3 +319,56 @@ strong {
   }
   .modal-content { width: 95%; }
 }
+
+/* ================================== */
+/* ACORDES*/
+/* ================================== */
+.contenedor-acordes {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    display: block;
+}
+
+.contenedor-acordes h3 {
+    font-size: 1rem;
+    color: #4caf50;
+    margin-bottom: 15px;
+    text-align: center;
+	width: 100%; /* Asegura que la frase ocupe todo el ancho disponible */
+    display: block; /* Se asegura que la frase esté en su propia línea */
+}
+
+/* Estilo para los acordes dentro de las letras */
+.acorde {
+    color: #4caf50; /* Verde */
+    font-size: 0.85rem; /* Tamaño más pequeño */
+    line-height: 0.8;
+    vertical-align: bottom; /* Alinear acorde más cerca de la línea de letras */
+}
+
+/* Ajuste en la visualización de acordes utilizados */
+.diagrama-acorde {
+    display: inline-block;
+    align-items: center;
+    background-color: #2c2c2c;
+    border: 1px solid #555;
+    width: 80px; /* Aumentar el tamaño para evitar desbordamiento */
+    padding: 8px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    margin: 4px;
+	text-align: center;
+}
+
+.diagrama-acorde text {
+    fill: #ffffff;
+}
+
+/* Ajuste para la imagen del acorde */
+.diagrama-acorde svg {
+    width: 60px; /* Ajustar el tamaño para que se adapte al contenedor */
+    height: auto;
+	color: #ffffff;
+}

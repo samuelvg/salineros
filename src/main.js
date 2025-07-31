@@ -10,6 +10,8 @@ import { SongFormView }   from './ui/songFormView.js';
 import { AppStatusView }  from './ui/appStatusView.js';
 import { Song }           from './models/songModel.js';
 import { procesarCancion }from './ui/chordParser.js';
+import { crearReproductorMultipista } from './ui/multiTrackPlayer.js';
+import { mostrarAcordesUtilizados } from './ui/chordRenderer.js';
 
 // Registrar Service Worker
 if ('serviceWorker' in navigator) {
@@ -63,6 +65,42 @@ const modal = createModal();
 // Estado global
 let allSongs = [];
 const selectedTags = new Set();
+
+/**
+ * Función para renderizar audios, incluyendo reproductor multipista.
+ */
+function mostrarAudios(cancion) {
+  const audTab = document.getElementById('tab-audios');
+  audTab.innerHTML = '';
+  if (!cancion.audios) {
+    audTab.textContent = 'No hay audios disponibles.';
+    return;
+  }
+  // Separar secciones de texto y JSON de reproductor
+  const partes = cancion.audios.split(/\[reproductor:\s*(\[[\s\S]*?\])\]/);
+  partes.forEach((parte, idx) => {
+    if (idx % 2 === 0) {
+      const div = document.createElement('div');
+      div.innerHTML = parte.trim();
+      audTab.appendChild(div);
+    } else {
+      let config;
+      try {
+        config = JSON.parse(parte);
+      } catch (e) {
+        console.error('JSON inválido en audios:', e);
+        const err = document.createElement('p');
+        err.textContent = 'Error al cargar los audios.';
+        audTab.appendChild(err);
+        return;
+      }
+      const cont = document.createElement('div');
+      cont.className = 'multiTrackPlayer';
+      audTab.appendChild(cont);
+      crearReproductorMultipista(config, cont);
+    }
+  });
+}
 
 /**
  * Ordena canciones por título de forma alfabética.
@@ -168,21 +206,18 @@ async function renderAndSync(doSync = true) {
     if (!song) return;
     document.getElementById('modal-title').textContent = song.titulo;
     document.getElementById('tab-letra').innerHTML = `<pre style="white-space: pre-wrap;">${song.letra || ''}</pre>`;
-    document.getElementById('tab-acordes').innerHTML = procesarCancion(song.acordes || '');
+
+    const tabAcordesEl = document.getElementById('tab-acordes');
+    tabAcordesEl.innerHTML = procesarCancion(song.acordes || '');
+    const diagramContainer = document.createElement('div');
+    diagramContainer.className = 'diagram-container'; // ponle la clase que gustes
+    tabAcordesEl.appendChild(diagramContainer);
+    mostrarAcordesUtilizados(song.acordes || '', diagramContainer);
+    
     document.getElementById('tab-melodia').innerHTML = `<pre>${song.melodia || ''}</pre>`;
-    const audTab = document.getElementById('tab-audios');
-    audTab.innerHTML = '';
-    let audios = [];
-    try {
-      const parsed = JSON.parse(song.audios);
-      audios = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      audios = song.audios.split(',').map(u => u.trim()).filter(u => u);
-    }
-    audios.forEach(src => {
-      const audio = document.createElement('audio'); audio.controls = true; audio.src = src;
-      audTab.appendChild(audio);
-    });
+     // Usar nuestra función para manejar audios
+    mostrarAudios(song);
+
     modal.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'letra'));
     modal.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === 'tab-letra'));
     modal.classList.remove('hidden');
