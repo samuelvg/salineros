@@ -1,0 +1,170 @@
+/* =================================
+   LOS SALINEROS - Acordes y Audio
+   ================================= */
+
+/* -----------------------------
+   Estilos para acordes y letras
+   ----------------------------- */
+.linea-acordes {
+  font-family: var(--font-mono);
+  color: var(--accent-primary);
+  font-weight: 600;
+  white-space: pre-wrap;
+  line-height: 1.2;
+  margin-bottom: var(--space-xs);
+}
+
+.linea-lyrics {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin-bottom: var(--space-lg);
+  font-size: 1.05rem;
+}
+
+.acorde {
+  color: var(--accent-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: rgba(0, 212, 170, 0.1);
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 212, 170, 0.3);
+}
+
+/* -----------------------------
+   Contenedor de acordes
+   ----------------------------- */
+.contenedor-acordes {
+  margin-top: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.contenedor-acordes h3 {
+  color: var(--accent-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: var(--space-lg);
+  text-align: center;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.diagrama-acorde {
+  display: inline-block;
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm);
+  margin: var(--space-xs);
+  text-align: center;
+  transition: all var(--transition-smooth);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.diagrama-acorde:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.diagrama-acorde svg {
+  width: 60px;
+  height: auto;
+  filter: brightness(1.2);
+}
+
+.nombre-acorde {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-top: var(--space-xs);
+}
+
+/* -----------------------------
+   Reproductor de audio
+   ----------------------------- */
+.multiTrackPlayer {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin: var(--space-md) 0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.track-container {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  transition: all var(--transition-smooth);
+}
+
+.track-container:hover {
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+.track-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+  font-size: 0.9rem;
+}
+
+.waveform {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: var(--space-sm) 0;
+}
+
+/* -----------------------------
+   Estados de error en audio
+   ----------------------------- */
+.error-audio {
+  color: var(--error);
+  font-style: italic;
+  padding: var(--space-md);
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+/* -----------------------------
+   Responsive para acordes y audio
+   ----------------------------- */
+@media (max-width: 480px) {
+  .contenedor-acordes {
+    padding: var(--space-md);
+    margin-top: var(--space-lg);
+  }
+  
+  .diagrama-acorde {
+    margin: 2px;
+    padding: var(--space-xs);
+  }
+  
+  .diagrama-acorde svg {
+    width: 50px;
+  }
+  
+  .linea-lyrics {
+    font-size: 1rem;
+  }
+  
+  .multiTrackPlayer {
+    padding: var(--space-md);
+  }
+}

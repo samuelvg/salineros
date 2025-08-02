@@ -1,0 +1,211 @@
+/* =================================
+   LOS SALINEROS - Layout y estructura
+   ================================= */
+
+/* -----------------------------
+   Header principal
+   ----------------------------- */
+.app-title {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 212, 170, 0.2);
+  
+  text-align: center;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  
+  padding: var(--space-lg) var(--space-md);
+  margin: 0;
+  
+  background-image: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* -----------------------------
+   Barra de estado
+   ----------------------------- */
+#status-bar {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  font-size: 0.85rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all var(--transition-smooth);
+}
+
+.status-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-online {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+.status-online::before { background: #4caf50; }
+
+.status-offline {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  border-color: rgba(244, 67, 54, 0.3);
+}
+.status-offline::before { background: #f44336; }
+
+/* -----------------------------
+   Filtros de etiquetas
+   ----------------------------- */
+#filter-container {
+  display: flex;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-lg);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#filter-container::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-btn {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-xl);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-gradient);
+  transition: left var(--transition-smooth);
+  z-index: -1;
+}
+
+.filter-btn:hover::before,
+.filter-btn.active::before {
+  left: 0;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* -----------------------------
+   Botón flotante de agregar
+   ----------------------------- */
+.btn-add-floating {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-lg);
+  z-index: 100;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  
+  background: var(--accent-gradient);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 50%;
+  box-shadow: var(--shadow-strong);
+  cursor: pointer;
+  
+  font-size: 1.5rem;
+  font-weight: 700;
+  
+  transition: all var(--transition-bouncy);
+  overflow: hidden;
+}
+
+.btn-add-floating::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.6s ease-out;
+}
+
+.btn-add-floating:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+.btn-add-floating:hover {
+  transform: scale(1.1) translateY(-4px);
+  box-shadow: var(--shadow-glow), var(--shadow-strong);
+}
+
+.btn-add-floating:active {
+  transform: scale(0.95);
+  transition: transform var(--transition-fast);
+}
+
+.add-icon {
+  position: relative;
+  z-index: 1;
+  transition: transform var(--transition-smooth);
+}
+
+.btn-add-floating:hover .add-icon {
+  transform: rotate(45deg);
+}
+
+.add-text {
+  display: none;
+}

@@ -39,8 +39,31 @@ export const CacheService = {
    * @param {Object} song Objeto canción con propiedades id, titulo, letra, acordes, updated_at.
    * @returns {Promise<Object>} La canción guardada.
    */
-  saveSong(song) {
-    return db.songs.put(song).then(() => song);
+  async saveSong(song) {
+    // Crear una copia limpia del objeto para evitar problemas con WeakMap
+    const cleanSong = {
+      id: song.id,
+      titulo: song.titulo,
+      letra: song.letra,
+      acordes: song.acordes,
+      melodia: song.melodia,
+      audios: song.audios,
+      etiquetas: song.etiquetas,
+      updated_at: song.updated_at || new Date().toISOString()
+    };
+
+    // Si no tiene ID, generar uno temporal para operaciones offline
+    if (!cleanSong.id) {
+      cleanSong.id = Date.now() + Math.random(); // ID único temporal
+    }
+
+    try {
+      await db.songs.put(cleanSong);
+      return cleanSong;
+    } catch (error) {
+      console.error('Error al guardar canción en cache:', error);
+      throw error;
+    }
   },
 
   /**
@@ -49,15 +72,16 @@ export const CacheService = {
    * @returns {Promise<void>}
    */
   deleteSong(id) {
-    return db.songs.delete(id);
+    return db.songs.delete(Number(id));
   },
 
   /**
    * Obtiene el timestamp ISO de la última sincronización.
    * @returns {Promise<string|null>} Timestamp en ISO o null.
    */
-  getUltimaSync() {
-    return db.metadata.get('ultimaSync').then(m => m ? m.valor : null);
+  async getUltimaSync() {
+    const meta = await db.metadata.get('ultimaSync');
+    return meta ? meta.valor : null;
   },
 
   /**
@@ -75,7 +99,21 @@ export const CacheService = {
    * @returns {Promise<number>} ID del registro en la cola.
    */
   enqueue(op) {
-    return db.outbox.add(op);
+    // Limpiar el objeto data para evitar problemas con WeakMap
+    const cleanOp = {
+      type: op.type,
+      data: op.data ? {
+        id: op.data.id,
+        titulo: op.data.titulo,
+        letra: op.data.letra,
+        acordes: op.data.acordes,
+        melodia: op.data.melodia,
+        audios: op.data.audios,
+        etiquetas: op.data.etiquetas,
+        updated_at: op.data.updated_at
+      } : null
+    };
+    return db.outbox.add(cleanOp);
   },
 
   /**

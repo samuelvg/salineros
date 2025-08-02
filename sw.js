@@ -9,7 +9,7 @@ const DATA_CACHE_NAME = 'data-cache-v1';
 const FILES_TO_CACHE = [
   './',                 // index.html
   'index.html',
-  'styles.css',
+  'css/main.css',
   'manifest.json',
   // Sólo inclúyelos si están en intranet3/icons/
   'icons/icon-192.png',

@@ -1,11 +1,12 @@
 // src/ui/chordRenderer.js
+
 /**
  * Obtiene la definición (posición, barras, etc.) de un acorde
  * @param {string} acorde Nombre limpio, e.g. "Am7"
  * @returns {object|null}
  */
 export function obtenerPosicionesAcorde(acorde) {
-  return acordesDefinidos[acorde] || null;              // idéntico a scripts.js :contentReference[oaicite:3]{index=3}
+  return acordesDefinidos[acorde] || null;
 }
 
 /**
@@ -15,7 +16,13 @@ export function obtenerPosicionesAcorde(acorde) {
  * @param {HTMLElement} contenedor Nodo donde insertar los diagramas
  */
 export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
-  if (!textoAcordes) return console.error("No hay texto de acordes");  // :contentReference[oaicite:4]{index=4}
+  // Limpiar contenedor primero
+  contenedor.innerHTML = '';
+  
+  if (!textoAcordes || !textoAcordes.trim()) {
+    // No mostrar error, simplemente no hacer nada si no hay acordes
+    return;
+  }
 
   // Regex: busca [A-G](#|b)?(maj7|dim|aug|m7|m|7)?
   const acordeRegex = /\[([A-G](#|b)?(maj7|dim|aug|m7|m|7)?)\]/g;
@@ -23,6 +30,11 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
   let match;
   while ((match = acordeRegex.exec(textoAcordes))) {
     encontrados.add(match[1]);
+  }
+
+  // Si no se encontraron acordes, no mostrar nada
+  if (encontrados.size === 0) {
+    return;
   }
 
   // Contenedor base
@@ -40,7 +52,7 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
     const diagrama = document.createElement('div');
     diagrama.className = 'diagrama-acorde';
 
-    // Usa Raphael + ChordBox como en scripts.js :contentReference[oaicite:5]{index=5}
+    // Usa Raphael + ChordBox como en scripts.js
     const paper = Raphael(diagrama, 80, 125);
     const chord = new ChordBox(paper, 0, 5, 60, 80);
     chord.setChord(pos.chord, pos.position, pos.bars);
@@ -54,7 +66,6 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
     wrapper.appendChild(diagrama);
   });
 
-  // Limpia y añade al DOM
-  contenedor.innerHTML = '';
+  // Añadir al DOM
   contenedor.appendChild(wrapper);
 }
