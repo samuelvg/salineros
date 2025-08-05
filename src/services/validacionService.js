@@ -1,6 +1,5 @@
 // =================================
-// Archivo: /src/services/validacionService.js
-// Servicio mejorado de validación con mensajes en español
+// Archivo: src/services/validacionService.js - ARREGLO ACORDES
 // =================================
 
 export class ValidacionService {
@@ -19,7 +18,8 @@ export class ValidacionService {
     acordes: {
       requerido: false,
       maxLongitud: 5000,
-      patronAcordes: /\[[A-G](#|b)?(maj7|dim|aug|m7|m|7)?\]/g
+      // PATRÓN MEJORADO: más flexible para diferentes tipos de acordes
+      patronAcordes: /\[([A-G](#|b|♯|♭)?(maj|min|m|dim|aug|sus|add)?(7|9|11|13|6|4|2)?(#|b|♯|♭)?(5|9|11|13)?\/?([A-G](#|b|♯|♭)?)?)\]/gi
     },
     melodia: {
       requerido: false,
@@ -42,7 +42,7 @@ export class ValidacionService {
     minLongitud: 'Debe tener al menos {min} caracteres',
     maxLongitud: 'No puede exceder {max} caracteres',
     patron: 'Contiene caracteres no válidos',
-    patronAcordes: 'Los acordes deben tener formato [C], [Am7], etc.',
+    patronAcordes: 'Los acordes deben estar entre corchetes [C], [Am7], [F#maj7], etc.',
     patronURL: 'Debe ser una URL válida (http:// o https://)',
     maxEtiquetas: 'Máximo {max} etiquetas permitidas',
     maxLongitudEtiqueta: 'Cada etiqueta debe tener máximo {max} caracteres'
@@ -50,9 +50,6 @@ export class ValidacionService {
 
   /**
    * Valida un campo específico según las reglas definidas
-   * @param {string} nombreCampo - Nombre del campo a validar
-   * @param {*} valor - Valor del campo
-   * @returns {Object} { esValido: boolean, errores: string[] }
    */
   static validarCampo(nombreCampo, valor) {
     const regla = this.reglas[nombreCampo];
@@ -98,12 +95,26 @@ export class ValidacionService {
     switch (nombreCampo) {
       case 'acordes':
         if (valorLimpio && regla.patronAcordes) {
+          // VALIDACIÓN MEJORADA DE ACORDES
           const acordesEncontrados = valorLimpio.match(/\[[^\]]+\]/g) || [];
-          const acordesInvalidos = acordesEncontrados.filter(acorde => 
-            !regla.patronAcordes.test(acorde)
-          );
-          if (acordesInvalidos.length > 0) {
-            errores.push(`${this.mensajes.patronAcordes} Acordes inválidos: ${acordesInvalidos.join(', ')}`);
+          
+          if (acordesEncontrados.length > 0) {
+            // Verificar cada acorde individualmente con un patrón más flexible
+            const acordesInvalidos = acordesEncontrados.filter(acorde => {
+              // Extraer el contenido del acorde (sin corchetes)
+              const contenidoAcorde = acorde.replace(/[\[\]]/g, '');
+              
+              // Patrón más flexible para validar acordes individuales
+              const patronFlexible = /^([A-G](#|b|♯|♭)?(maj|min|m|dim|aug|sus|add|°|ø|Δ|M)?(7|9|11|13|6|4|2)?(#|b|♯|♭)?(5|9|11|13)?\/?([A-G](#|b|♯|♭)?)?(\(.*\))?)$/i;
+              
+              return !patronFlexible.test(contenidoAcorde);
+            });
+            
+            if (acordesInvalidos.length > 0) {
+              // Solo mostrar error si hay acordes claramente inválidos
+              const muestrasInvalidas = acordesInvalidos.slice(0, 3).join(', ');
+              errores.push(`${this.mensajes.patronAcordes} Acordes problemáticos: ${muestrasInvalidas}`);
+            }
           }
         }
         break;
@@ -151,9 +162,43 @@ export class ValidacionService {
   }
 
   /**
+   * MÉTODO MEJORADO: Extrae acordes del texto de forma más flexible
+   */
+  static extraerAcordes(textoAcordes) {
+    if (!textoAcordes || typeof textoAcordes !== 'string') {
+      return [];
+    }
+
+    // Buscar todos los acordes entre corchetes
+    const acordesEncontrados = textoAcordes.match(/\[([^\]]+)\]/g) || [];
+    
+    // Limpiar y filtrar acordes válidos
+    const acordesLimpios = acordesEncontrados
+      .map(acorde => acorde.replace(/[\[\]]/g, '').trim())
+      .filter(acorde => acorde.length > 0)
+      .filter((acorde, indice, array) => array.indexOf(acorde) === indice); // eliminar duplicados
+
+    return acordesLimpios;
+  }
+
+  /**
+   * MÉTODO NUEVO: Valida si un acorde individual es válido
+   */
+  static esAcordeValido(acorde) {
+    if (!acorde || typeof acorde !== 'string') {
+      return false;
+    }
+
+    // Patrón muy flexible que acepta la mayoría de notaciones de acordes
+    const patronAcordeFlexible = /^([A-G](#|b|♯|♭)?(maj|min|m|dim|aug|sus|add|°|ø|Δ|M|-)?(7|9|11|13|6|4|2)?(#|b|♯|♭)?(5|9|11|13)?\/?([A-G](#|b|♯|♭)?)?(\(.*\))?)$/i;
+    
+    return patronAcordeFlexible.test(acorde.trim());
+  }
+
+  // ... resto de métodos sin cambios ...
+  
+  /**
    * Valida un formulario completo
-   * @param {Object} datos - Objeto con los datos del formulario
-   * @returns {Object} { esValido: boolean, erroresPorCampo: Object, resumen: string }
    */
   static validarFormulario(datos) {
     const erroresPorCampo = {};
@@ -185,8 +230,6 @@ export class ValidacionService {
 
   /**
    * Procesa las etiquetas desde string CSV a array limpio
-   * @param {string} etiquetasString - String con etiquetas separadas por comas
-   * @returns {Array<string>} Array de etiquetas limpias
    */
   static procesarEtiquetas(etiquetasString) {
     if (!etiquetasString || typeof etiquetasString !== 'string') {
@@ -202,8 +245,6 @@ export class ValidacionService {
 
   /**
    * Valida datos de canción en tiempo real
-   * @param {Object} cancion - Objeto canción
-   * @returns {Object} Resultado de validación completa
    */
   static validarCancion(cancion) {
     const validacion = this.validarFormulario(cancion);
@@ -216,11 +257,11 @@ export class ValidacionService {
       validacionesExtra.push('Una canción debe tener al menos título y letra');
     }
 
-    // Verificar consistencia entre acordes y letra
+    // VALIDACIÓN MEJORADA: Verificar consistencia entre acordes y letra
     if (cancion.acordes?.trim() && cancion.letra?.trim()) {
-      const acordesEnLetra = (cancion.acordes.match(/\[[^\]]+\]/g) || []).length;
-      if (acordesEnLetra === 0) {
-        validacionesExtra.push('El campo acordes no contiene acordes válidos [C], [Am], etc.');
+      const acordesExtraidos = this.extraerAcordes(cancion.acordes);
+      if (acordesExtraidos.length === 0) {
+        validacionesExtra.push('El campo acordes no contiene acordes válidos entre corchetes [C], [Am], etc.');
       }
     }
 
@@ -231,7 +272,7 @@ export class ValidacionService {
     };
   }
 
-  /**
+   /**
    * Sanitiza datos de entrada para prevenir XSS
    * @param {Object} datos - Datos a sanitizar
    * @returns {Object} Datos sanitizados
@@ -246,13 +287,17 @@ export class ValidacionService {
         // Limpiar espacios extras
         valor = valor.trim();
         
-        // Escapar caracteres HTML básicos
-        valor = valor
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#x27;');
+        // IMPORTANTE: NO escapar HTML en el campo 'audios'
+        // para permitir tags como <audio>, <video>, etc.
+        if (clave !== 'audios') {
+          // Escapar caracteres HTML básicos para otros campos
+          valor = valor
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+        }
       }
 
       datosSanitizados[clave] = valor;

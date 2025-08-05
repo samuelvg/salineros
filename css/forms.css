@@ -1,5 +1,5 @@
 /* =================================
-   LOS SALINEROS - Formularios
+   LOS SALINEROS - Formularios Completo
    ================================= */
 
 /* -----------------------------
@@ -378,6 +378,9 @@
   border: 1px solid rgba(0, 212, 170, 0.3);
 }
 
+/* -----------------------------
+   Preview de acordes mejorado
+   ----------------------------- */
 .acordes-preview {
   margin-top: var(--space-sm);
   padding: var(--space-sm);
@@ -385,27 +388,100 @@
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.1);
   min-height: 40px;
+  font-size: 0.85rem;
 }
 
 .acordes-encontrados {
-  font-size: 0.8rem;
+  margin-bottom: var(--space-sm);
+}
+
+.acordes-encontrados strong {
+  color: var(--success);
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+
+.acordes-problematicos {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.acordes-problematicos strong {
+  color: var(--warning);
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+
+.acordes-problematicos small {
+  color: var(--text-muted);
+  font-style: italic;
+  display: block;
+  margin-top: var(--space-xs);
 }
 
 .acorde-preview {
-  background: rgba(0, 212, 170, 0.15);
-  color: var(--accent-primary);
+  display: inline-block;
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--font-mono);
   font-weight: 600;
-  margin: 0 2px;
-  border: 1px solid rgba(0, 212, 170, 0.3);
+  margin: 0 3px 3px 0;
+  font-size: 0.8rem;
+  border: 1px solid;
+  transition: all var(--transition-smooth);
+}
+
+.acorde-preview.valido {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--success);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.acorde-preview.invalido {
+  background: rgba(255, 152, 0, 0.15);
+  color: var(--warning);
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.acorde-preview:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .acordes-ayuda {
   color: var(--text-muted);
   font-style: italic;
   font-size: 0.8rem;
+  line-height: 1.4;
+  padding: var(--space-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.acordes-ayuda.error {
+  color: var(--warning);
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  font-style: normal;
+}
+
+.acordes-ayuda strong {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* Contador de acordes */
+.contador-acordes {
+  display: inline-block;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  margin-left: var(--space-sm);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* -----------------------------
@@ -520,4 +596,123 @@
   align-items: center;
   justify-content: center;
   z-index: 10;
+}
+
+/* -----------------------------
+   Modal de ayuda
+   ----------------------------- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(5px);
+}
+
+.ayuda-modal {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.ayuda-content {
+  padding: 2rem;
+}
+
+.ayuda-content h4 {
+  color: var(--accent-primary);
+  margin-bottom: 1rem;
+}
+
+.ayuda-content ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.ayuda-content li {
+  margin-bottom: 0.5rem;
+}
+
+.ayuda-content pre {
+  background: var(--bg-elevated);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-family: var(--font-mono);
+}
+
+.btn-cerrar-ayuda {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all var(--transition-smooth);
+}
+
+.btn-cerrar-ayuda:hover {
+  background: var(--accent-secondary);
+  transform: translateY(-2px);
+}
+
+/* -----------------------------
+   Responsive para formularios
+   ----------------------------- */
+@media (max-width: 640px) {
+  .form-buttons {
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+  }
+  
+  .form-tab-btn {
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-size: 0.8rem;
+  }
+  
+  .tab-indicator {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+  
+  .textarea-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+  
+  .etiquetas-preview {
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  
+  .acordes-preview {
+    font-size: 0.8rem;
+    padding: var(--space-sm);
+  }
+  
+  .acorde-preview {
+    font-size: 0.75rem;
+    padding: 1px 4px;
+    margin: 0 2px 2px 0;
+  }
+  
+  .acordes-ayuda {
+    font-size: 0.75rem;
+    padding: var(--space-xs);
+  }
 }

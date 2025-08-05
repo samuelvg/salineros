@@ -225,63 +225,199 @@ export class UIManager {
     appEvents.emit('ui:form:close');
   }
 
-  /**
-   * Genera botones de filtro por etiquetas
-   */
-  generarBotonesEtiquetas() {
-    const contenedor = document.getElementById('filter-container');
-    if (!contenedor) {
-      console.warn('No se encontró el contenedor de filtros');
-      return;
+  // =================================
+// Actualización para src/controllers/UIManager.js 
+// Método generarBotonesEtiquetas mejorado con botón limpiar
+// =================================
+
+/**
+ * MÉTODO MEJORADO: Genera botones de filtro por etiquetas con funcionalidades adicionales
+ */
+generarBotonesEtiquetas() {
+  const contenedor = document.getElementById('filter-container');
+  if (!contenedor) {
+    console.warn('No se encontró el contenedor de filtros');
+    return;
+  }
+  
+  contenedor.innerHTML = '';
+  
+  const todasLasEtiquetas = this.app.songManager.getAllTags();
+  
+  if (todasLasEtiquetas.length === 0) {
+    contenedor.style.display = 'none';
+    return;
+  }
+  
+  contenedor.style.display = 'flex';
+  
+  // AÑADIR botón "Limpiar filtros" si hay etiquetas seleccionadas
+  if (this.etiquetasSeleccionadas.size > 0) {
+    const botonLimpiar = document.createElement('button');
+    botonLimpiar.textContent = `✕ Limpiar (${this.etiquetasSeleccionadas.size})`;
+    botonLimpiar.className = 'filter-btn filter-clear';
+    botonLimpiar.setAttribute('title', 'Limpiar todos los filtros');
+    botonLimpiar.setAttribute('aria-label', `Limpiar ${this.etiquetasSeleccionadas.size} filtros activos`);
+    
+    botonLimpiar.addEventListener('click', () => {
+      this.limpiarFiltros();
+    });
+    
+    contenedor.appendChild(botonLimpiar);
+  }
+  
+  // Generar botones para cada etiqueta
+  todasLasEtiquetas.forEach((etiqueta, index) => {
+    const boton = document.createElement('button');
+    const estaActiva = this.etiquetasSeleccionadas.has(etiqueta);
+    
+    // Texto del botón con contador si está activa
+    boton.textContent = etiqueta;
+    if (estaActiva) {
+      const contador = document.createElement('span');
+      contador.className = 'filter-counter';
+      contador.textContent = '✓';
+      contador.setAttribute('aria-label', 'Filtro activo');
+      boton.appendChild(contador);
     }
     
-    contenedor.innerHTML = '';
+    boton.className = estaActiva ? 'filter-btn active' : 'filter-btn';
+    boton.setAttribute('aria-pressed', estaActiva);
+    boton.setAttribute('title', `Filtrar por: ${etiqueta}`);
+    boton.setAttribute('data-etiqueta', etiqueta);
     
-    const todasLasEtiquetas = this.app.songManager.getAllTags();
+    // Añadir delay de animación escalonada
+    boton.style.animationDelay = `${index * 0.05}s`;
     
-    if (todasLasEtiquetas.length === 0) {
-      contenedor.style.display = 'none';
-      return;
-    }
+    boton.addEventListener('click', () => {
+      this.alternarEtiqueta(etiqueta);
+    });
     
-    contenedor.style.display = 'flex';
-    
-    todasLasEtiquetas.forEach(etiqueta => {
-      const boton = document.createElement('button');
-      boton.textContent = etiqueta;
-      boton.className = this.etiquetasSeleccionadas.has(etiqueta) 
-        ? 'filter-btn active' 
-        : 'filter-btn';
-      boton.setAttribute('aria-pressed', this.etiquetasSeleccionadas.has(etiqueta));
-      boton.setAttribute('title', `Filtrar por: ${etiqueta}`);
-      
-      boton.addEventListener('click', () => {
+    // Mejorar accesibilidad con teclado
+    boton.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Enter' || evento.key === ' ') {
+        evento.preventDefault();
         this.alternarEtiqueta(etiqueta);
-      });
-      
-      contenedor.appendChild(boton);
+      }
     });
-
-    appEvents.emit('ui:filters_updated', { tags: todasLasEtiquetas });
-  }
-
-  /**
-   * Alterna el estado de una etiqueta de filtro
-   */
-  alternarEtiqueta(etiqueta) {
-    if (this.etiquetasSeleccionadas.has(etiqueta)) {
-      this.etiquetasSeleccionadas.delete(etiqueta);
-    } else {
-      this.etiquetasSeleccionadas.add(etiqueta);
-    }
     
-    this.generarBotonesEtiquetas();
-    this.updateSongList();
+    contenedor.appendChild(boton);
+  });
 
-    appEvents.emit('ui:filter_changed', { 
-      selectedTags: Array.from(this.etiquetasSeleccionadas) 
-    });
+  // Emitir evento para estadísticas
+  appEvents.emit('ui:filters_updated', { 
+    tags: todasLasEtiquetas,
+    selectedCount: this.etiquetasSeleccionadas.size,
+    totalCount: todasLasEtiquetas.length
+  });
+}
+
+/**
+ * MÉTODO NUEVO: Limpia todos los filtros activos
+ */
+limpiarFiltros() {
+  const etiquetasAnteriores = new Set(this.etiquetasSeleccionadas);
+  
+  this.etiquetasSeleccionadas.clear();
+  this.generarBotonesEtiquetas();
+  this.updateSongList();
+  
+  // Mostrar notificación de confirmación
+  notificacionService.informacion(
+    'Filtros limpiados',
+    `Se quitaron ${etiquetasAnteriores.size} filtro(s) activo(s)`
+  );
+  
+  appEvents.emit('ui:filters_cleared', { 
+    previousTags: Array.from(etiquetasAnteriores) 
+  });
+}
+
+/**
+ * MÉTODO MEJORADO: Alterna el estado de una etiqueta de filtro
+ */
+alternarEtiqueta(etiqueta) {
+  const estabaActiva = this.etiquetasSeleccionadas.has(etiqueta);
+  
+  if (estabaActiva) {
+    this.etiquetasSeleccionadas.delete(etiqueta);
+  } else {
+    this.etiquetasSeleccionadas.add(etiqueta);
   }
+  
+  // Regenerar botones con animación
+  this.generarBotonesEtiquetas();
+  this.updateSongList();
+  
+  // Feedback al usuario
+  const mensaje = estabaActiva 
+    ? `Filtro "${etiqueta}" desactivado`
+    : `Filtro "${etiqueta}" activado`;
+    
+  // Solo mostrar notificación en modo debug o si hay muchos filtros
+  if (this.etiquetasSeleccionadas.size > 3) {
+    notificacionService.informacion('Filtro actualizado', mensaje);
+  }
+
+  appEvents.emit('ui:filter_changed', { 
+    etiqueta,
+    accion: estabaActiva ? 'removed' : 'added',
+    selectedTags: Array.from(this.etiquetasSeleccionadas),
+    totalSelected: this.etiquetasSeleccionadas.size
+  });
+}
+
+/**
+ * MÉTODO NUEVO: Obtiene estadísticas de filtros
+ */
+obtenerEstadisticasFiltros() {
+  const todasLasEtiquetas = this.app.songManager.getAllTags();
+  const cancionesFiltradas = this.aplicarFiltrosEtiquetas(this.app.songManager.getAllSongs());
+  
+  return {
+    totalEtiquetas: todasLasEtiquetas.length,
+    etiquetasSeleccionadas: this.etiquetasSeleccionadas.size,
+    cancionesTotales: this.app.songManager.getAllSongs().length,
+    cancionesFiltradas: cancionesFiltradas.length,
+    porcentajeFiltrado: Math.round((cancionesFiltradas.length / this.app.songManager.getAllSongs().length) * 100)
+  };
+}
+
+/**
+ * MÉTODO NUEVO: Aplicar filtro rápido por etiqueta específica
+ */
+aplicarFiltroRapido(etiqueta) {
+  // Limpiar filtros anteriores
+  this.etiquetasSeleccionadas.clear();
+  
+  // Aplicar solo esta etiqueta
+  if (etiqueta && etiqueta.trim()) {
+    this.etiquetasSeleccionadas.add(etiqueta.trim());
+  }
+  
+  this.generarBotonesEtiquetas();
+  this.updateSongList();
+  
+  appEvents.emit('ui:quick_filter_applied', { etiqueta });
+}
+
+/**
+ * MÉTODO NUEVO: Obtener sugerencias de etiquetas basadas en canciones visibles
+ */
+obtenerSugerenciasEtiquetas() {
+  const cancionesVisibles = this.aplicarFiltrosEtiquetas(this.app.songManager.getAllSongs());
+  const etiquetasSugeridas = new Set();
+  
+  cancionesVisibles.forEach(cancion => {
+    cancion.tags.forEach(tag => {
+      if (!this.etiquetasSeleccionadas.has(tag)) {
+        etiquetasSugeridas.add(tag);
+      }
+    });
+  });
+  
+  return Array.from(etiquetasSugeridas).sort();
+}
 
   /**
    * Muestra notificaciones de éxito
@@ -513,49 +649,54 @@ export class UIManager {
     }
     
     try {
-      // Separar secciones de texto y JSON de reproductor
-      const partes = cancion.audios.split(/\[reproductor:\s*(\[[\s\S]*?\])\]/);
+      // Detectar si contiene configuración de reproductor multipista
+      const tieneReproductor = /\[reproductor:\s*(\[[\s\S]*?\])\]/.test(cancion.audios);
       
-      partes.forEach((parte, indice) => {
-        if (indice % 2 === 0) {
-          // Texto normal
-          if (parte.trim()) {
-            const div = document.createElement('div');
-            div.className = 'audio-text';
-            div.innerHTML = parte.trim().replace(/\n/g, '<br>');
-            tabAudios.appendChild(div);
+      if (tieneReproductor) {
+        // Procesamiento para reproductor multipista (como antes)
+        const partes = cancion.audios.split(/\[reproductor:\s*(\[[\s\S]*?\])\]/);
+        
+        partes.forEach((parte, indice) => {
+          if (indice % 2 === 0) {
+            // Texto normal - RENDERIZAR COMO HTML
+            if (parte.trim()) {
+              const div = document.createElement('div');
+              div.className = 'audio-text';
+              // CAMBIO CLAVE: usar innerHTML en lugar de textContent con <br>
+              div.innerHTML = parte.trim().replace(/\n/g, '<br>');
+              tabAudios.appendChild(div);
+            }
+          } else {
+            // Configuración del reproductor multipista
+            let configuracion;
+            try {
+              configuracion = JSON.parse(parte);
+            } catch (error) {
+              console.error('JSON inválido en configuración de audios:', error);
+              const mensajeError = document.createElement('p');
+              mensajeError.textContent = 'Error: Configuración de reproductor inválida';
+              mensajeError.className = 'error-audio';
+              tabAudios.appendChild(mensajeError);
+              return;
+            }
+            
+            const contenedorReproductor = document.createElement('div');
+            contenedorReproductor.className = 'multiTrackPlayer';
+            tabAudios.appendChild(contenedorReproductor);
+            
+            try {
+              crearReproductorMultipista(configuracion, contenedorReproductor);
+            } catch (error) {
+              console.error('Error al crear reproductor:', error);
+              contenedorReproductor.innerHTML = '<p class="error-audio">Error al cargar el reproductor de audio</p>';
+            }
           }
-        } else {
-          // Configuración del reproductor
-          let configuracion;
-          try {
-            configuracion = JSON.parse(parte);
-          } catch (error) {
-            console.error('JSON inválido en configuración de audios:', error);
-            const mensajeError = document.createElement('p');
-            mensajeError.textContent = 'Error: Configuración de reproductor inválida';
-            mensajeError.className = 'error-audio';
-            tabAudios.appendChild(mensajeError);
-            return;
-          }
-          
-          const contenedorReproductor = document.createElement('div');
-          contenedorReproductor.className = 'multiTrackPlayer';
-          tabAudios.appendChild(contenedorReproductor);
-          
-          try {
-            crearReproductorMultipista(configuracion, contenedorReproductor);
-          } catch (error) {
-            console.error('Error al crear reproductor:', error);
-            contenedorReproductor.innerHTML = '<p class="error-audio">Error al cargar el reproductor de audio</p>';
-          }
-        }
-      });
-      
-      // Si no se procesó nada, mostrar el texto tal como está
-      if (tabAudios.children.length === 0) {
+        });
+      } else {
+        // No hay reproductor multipista, mostrar todo como HTML
         const div = document.createElement('div');
         div.className = 'audio-text';
+        // CAMBIO CLAVE: usar innerHTML para renderizar tags HTML como <audio>
         div.innerHTML = cancion.audios.replace(/\n/g, '<br>');
         tabAudios.appendChild(div);
       }

@@ -102,7 +102,7 @@ export const SongFormView = {
               <small class="label-subtitle">Separadas por comas para categorizar la canción</small>
             </label>
             <input type="text" name="etiquetas" id="etiquetas" 
-                   placeholder="rock, pop, balada, navidad, clásico"
+                   placeholder="Tradicional, Romería, Sudamericana, Villancico..."
                    aria-describedby="help-etiquetas error-etiquetas"
                    maxlength="200">
             <small id="help-etiquetas" class="field-help">
@@ -123,7 +123,7 @@ export const SongFormView = {
             </label>
             <div class="textarea-container">
               <textarea name="letra" id="letra" rows="12" required 
-                        placeholder="Verse 1:&#10;Escribe aquí la letra de la canción&#10;línea por línea...&#10;&#10;Chorus:&#10;El estribillo va aquí..."
+                        placeholder="Escribe aquí la letra de la canción&#10;línea por línea...&#10;&#10;Admite etiquetas html como strong, em, etc."
                         aria-describedby="help-letra error-letra contador-letra"
                         maxlength="10000"></textarea>
               <div class="textarea-info">
@@ -168,11 +168,11 @@ export const SongFormView = {
           <div class="form-field">
             <label for="melodia">
               <span class="label-text">Melodía y notas</span>
-              <small class="label-subtitle">Partitura, notación musical, o descripción de la melodía</small>
+              <small class="label-subtitle">Para las púas</small>
             </label>
             <div class="textarea-container">
               <textarea name="melodia" id="melodia" rows="10" 
-                        placeholder="Tonalidad: Do Mayor&#10;Tempo: 76 BPM&#10;&#10;Intro: C - Am - F - G&#10;Verse: C - Am - F - C&#10;Chorus: F - G - Em - Am...&#10;&#10;O escribe la partitura aquí..."
+                        placeholder="Partitura, notación musical, o descripción de la melodía"
                         aria-describedby="help-melodia error-melodia contador-melodia"
                         maxlength="2000"></textarea>
               <div class="textarea-info">
@@ -195,7 +195,7 @@ export const SongFormView = {
             </label>
             <div class="textarea-container">
               <textarea name="audios" id="audios" rows="8" 
-                        placeholder="Enlaces de audio:&#10;https://ejemplo.com/audio1.mp3 - Versión original&#10;https://ejemplo.com/audio2.mp3 - Versión acústica&#10;&#10;[reproductor: [{&quot;id&quot;: &quot;pista1&quot;, &quot;archivo&quot;: &quot;audio1.mp3&quot;, &quot;nombre&quot;: &quot;Voz&quot;}, {&quot;id&quot;: &quot;pista2&quot;, &quot;archivo&quot;: &quot;audio2.mp3&quot;, &quot;nombre&quot;: &quot;Guitarra&quot;}]]&#10;&#10;Notas adicionales sobre el audio..."
+                        placeholder="Enlaces de audio:&#10;https://afsalineros.es/audios/zagalejo/Zagalejo-Todos.mp3 &#10;&#10;[reproductor:[&#10;{&quot;nombre&quot;:&quot;Tenores&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Tenores.mp3&quot;},&#10;{&quot;nombre&quot;:&quot;Barítonos&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Baritonos.mp3&quot;},&#10;{&quot;nombre&quot;:&quot;Bajos&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Bajos.mp3&quot;}]]"
                         aria-describedby="help-audios error-audios contador-audios"
                         maxlength="3000"></textarea>
               <div class="textarea-info">
@@ -560,34 +560,81 @@ export const SongFormView = {
   },
 
   /**
-   * Actualiza preview de acordes
-   */
-  actualizarPreviewAcordes() {
-    const campo = this.form.querySelector('#acordes');
-    const preview = this.form.querySelector('#preview-acordes');
+ * MÉTODO MEJORADO: Actualiza preview de acordes con mejor detección
+ */
+actualizarPreviewAcordes() {
+  const campo = this.form.querySelector('#acordes');
+  const preview = this.form.querySelector('#preview-acordes');
+  
+  if (!campo || !preview) return;
+  
+  const valor = campo.value.trim();
+  if (!valor) {
+    preview.innerHTML = '';
+    return;
+  }
+  
+  // Usar el método mejorado del ValidacionService
+  const acordesExtraidos = ValidacionService.extraerAcordes(valor);
+  
+  if (acordesExtraidos.length > 0) {
+    // Separar acordes válidos de inválidos
+    const acordesValidos = [];
+    const acordesInvalidos = [];
     
-    if (!campo || !preview) return;
+    acordesExtraidos.forEach(acorde => {
+      if (ValidacionService.esAcordeValido(acorde)) {
+        acordesValidos.push(acorde);
+      } else {
+        acordesInvalidos.push(acorde);
+      }
+    });
     
-    const valor = campo.value.trim();
-    if (!valor) {
-      preview.innerHTML = '';
-      return;
+    let html = '';
+    
+    // Mostrar acordes válidos
+    if (acordesValidos.length > 0) {
+      html += `
+        <div class="acordes-encontrados">
+          <strong>✅ Acordes válidos encontrados (${acordesValidos.length}):</strong><br>
+          ${acordesValidos.map(acorde => `<span class="acorde-preview valido">[${acorde}]</span>`).join(' ')}
+        </div>
+      `;
     }
     
-    const acordesEncontrados = valor.match(/\[([A-G][#b]?(maj7|dim|aug|m7|m|7)?)\]/g) || [];
-    const acordesUnicos = [...new Set(acordesEncontrados)];
+    // Mostrar acordes problemáticos si los hay
+    if (acordesInvalidos.length > 0) {
+      html += `
+        <div class="acordes-problematicos">
+          <strong>⚠️ Acordes que podrían tener problemas (${acordesInvalidos.length}):</strong><br>
+          ${acordesInvalidos.map(acorde => `<span class="acorde-preview invalido">[${acorde}]</span>`).join(' ')}
+          <br><small>💡 Verifica la notación de estos acordes</small>
+        </div>
+      `;
+    }
     
-    if (acordesUnicos.length > 0) {
+    preview.innerHTML = html;
+  } else {
+    // Si no se encontraron acordes, mostrar ayuda
+    const tieneCorchetes = valor.includes('[') && valor.includes(']');
+    
+    if (tieneCorchetes) {
       preview.innerHTML = `
-        <div class="acordes-encontrados">
-          <strong>Acordes encontrados:</strong>
-          ${acordesUnicos.map(acorde => `<span class="acorde-preview">${acorde}</span>`).join(' ')}
+        <div class="acordes-ayuda error">
+          ⚠️ Se encontraron corchetes pero no acordes válidos. 
+          <br><strong>Ejemplos correctos:</strong> [C], [Am], [G7], [F#m], [Bbmaj7]
         </div>
       `;
     } else {
-      preview.innerHTML = '<div class="acordes-ayuda">Usa formato [C], [Am], [G7], etc.</div>';
+      preview.innerHTML = `
+        <div class="acordes-ayuda">
+          💡 <strong>Tip:</strong> Pon los acordes entre corchetes: [C], [Am], [G7], etc.
+          <br><strong>Ejemplo:</strong> [C]Imagine there's no [Am]heaven [F]It's easy if you [C]try
+        </div>
+      `;
     }
-  },
+  }
+},
 
   /**
    * Maneja el envío del formulario

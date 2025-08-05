@@ -28,32 +28,3 @@
 
 /* 8. Responsive y media queries (debe ir al final) */
 @import url('./responsive.css');
-
-/* =================================
-   NOTAS DE IMPLEMENTACIÓN:
-   
-   1. Reemplaza el archivo styles.css actual con este main.css
-   2. Coloca todos los archivos CSS en la misma carpeta
-   3. Actualiza la referencia en tu HTML:
-      <link rel="stylesheet" href="main.css">
-   
-   VENTAJAS de esta estructura modular:
-   - Mantenimiento más fácil
-   - Búsqueda rápida de estilos específicos
-   - Colaboración en equipo mejorada
-   - Reutilización de componentes
-   - Debugging simplificado
-   - Organización lógica por funcionalidad
-   
-   ESTRUCTURA DE ARCHIVOS:
-   /css/
-   ├── main.css (este archivo)
-   ├── variables.css
-   ├── layout.css
-   ├── songs.css
-   ├── modals.css
-   ├── forms.css
-   ├── chords-audio.css
-   ├── animations.css
-   └── responsive.css
-   ================================= */

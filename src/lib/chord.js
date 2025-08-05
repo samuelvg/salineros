@@ -108,7 +108,10 @@ ChordBox.prototype.draw = function() {
           this.y +
           ((this.num_frets + 1) * this.fret_spacing),
           tuning[i]);
-        t.attr("font-size", this.metrics.font_size);
+        t.attr({
+      "font-size": this.metrics.font_size,
+      "fill": "#ffffff"
+    });
       }
   }
 
