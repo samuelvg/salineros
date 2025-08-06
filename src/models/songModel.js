@@ -15,11 +15,11 @@ export class Song {
   constructor({ id, titulo, letra, acordes, melodia, audios, etiquetas, updated_at }) {
     this.id         = id ? Number(id) : null;
     this.titulo     = titulo || '';
-    this.letra      = letra || '';       // texto plano
-    this.acordes    = acordes || '';     // texto plano con notación de acordes
-    this.melodia    = melodia || '';     // texto de la melodía
-    this.audios     = audios || '';      // texto, p.ej. "url1,url2" o JSON
-    // Parsear etiquetas CSV a array
+    // ✅ CORRECTO: No escapar HTML aquí, se hace en ValidacionService
+    this.letra      = letra || '';       
+    this.acordes    = acordes || '';     
+    this.melodia    = melodia || '';     
+    this.audios     = audios || '';      
     this.tags       = this.parseEtiquetas(etiquetas);
     this.updated_at = updated_at || new Date().toISOString();
   }

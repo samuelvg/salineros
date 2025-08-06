@@ -1,4 +1,6 @@
-// src/ui/chordRenderer.js
+// ============================================
+// ACTUALIZACIÓN: src/ui/chordRenderer.js - Mejor responsivo móvil
+// 
 
 /**
  * Obtiene la definición (posición, barras, etc.) de un acorde
@@ -10,8 +12,8 @@ export function obtenerPosicionesAcorde(acorde) {
 }
 
 /**
- * A partir del texto con corchetes [A-G…], extrae los acordes únicos
- * y los dibuja en el contenedor dado.
+ * MEJORADO: A partir del texto con corchetes [A-G…], extrae los acordes únicos
+ * y los dibuja en el contenedor dado con mejor estructura responsiva.
  * @param {string} textoAcordes Texto con etiquetas [C],[G#m7],…
  * @param {HTMLElement} contenedor Nodo donde insertar los diagramas
  */
@@ -37,10 +39,18 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
     return;
   }
 
-  // Contenedor base
+  // MEJORADO: Contenedor base con estructura responsiva
   const wrapper = document.createElement('div');
   wrapper.className = 'contenedor-acordes';
-  wrapper.innerHTML = '<h3>Acordes usados:</h3>';
+  
+  const titulo = document.createElement('h3');
+  titulo.textContent = 'Acordes usados:';
+  wrapper.appendChild(titulo);
+
+  // NUEVO: Grid container para mejor organización en móvil
+  const gridContainer = document.createElement('div');
+  gridContainer.className = 'acordes-grid';
+  wrapper.appendChild(gridContainer);
 
   encontrados.forEach((acordeLimpio) => {
     const pos = obtenerPosicionesAcorde(acordeLimpio);
@@ -52,18 +62,26 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
     const diagrama = document.createElement('div');
     diagrama.className = 'diagrama-acorde';
 
+    // MEJORADO: Tamaños más apropiados para móvil
+    const isMobile = window.innerWidth <= 640;
+    const svgWidth = isMobile ? 60 : 80;
+    const svgHeight = isMobile ? 78 : 105;
+
     // Usa Raphael + ChordBox como en scripts.js
-    const paper = Raphael(diagrama, 80, 125);
-    const chord = new ChordBox(paper, 0, 5, 60, 80);
+    const paper = Raphael(diagrama, svgWidth, svgHeight);
+    const chord = new ChordBox(paper, 0, 5, svgWidth * 0.75, svgHeight * 0.76);
     chord.setChord(pos.chord, pos.position, pos.bars);
     chord.draw();
 
     const label = document.createElement('div');
     label.className = 'nombre-acorde';
     label.textContent = acordeLimpio;
+    label.title = acordeLimpio; // Tooltip para acordes largos
 
     diagrama.appendChild(label);
-    wrapper.appendChild(diagrama);
+    
+    // CAMBIO: Agregar al grid en lugar de directamente al wrapper
+    gridContainer.appendChild(diagrama);
   });
 
   // Añadir al DOM

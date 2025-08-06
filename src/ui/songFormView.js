@@ -122,7 +122,7 @@ export const SongFormView = {
               <small class="label-subtitle">Escribe aquí toda la letra</small>
             </label>
             <div class="textarea-container">
-              <textarea name="letra" id="letra" rows="12" required 
+              <textarea name="letra" id="letra" rows="14" required 
                         placeholder="Escribe aquí la letra de la canción&#10;línea por línea...&#10;&#10;Admite etiquetas html como strong, em, etc."
                         aria-describedby="help-letra error-letra contador-letra"
                         maxlength="10000"></textarea>
@@ -145,7 +145,7 @@ export const SongFormView = {
               <small class="label-subtitle">Usa [C], [G], [Am], etc. para marcar los acordes sobre la letra</small>
             </label>
             <div class="textarea-container">
-              <textarea name="acordes" id="acordes" rows="12" 
+              <textarea name="acordes" id="acordes" rows="14" 
                         placeholder="[C]Imagine there's no [Am]heaven&#10;[F]It's easy if you [C]try&#10;[C]No hell be[Am]low us&#10;[F]Above us only [C]sky&#10;&#10;[Am]Imagine all the [Dm]people&#10;[F]Living for to[G]day..."
                         aria-describedby="help-acordes error-acordes contador-acordes"
                         maxlength="5000"></textarea>
@@ -171,7 +171,7 @@ export const SongFormView = {
               <small class="label-subtitle">Para las púas</small>
             </label>
             <div class="textarea-container">
-              <textarea name="melodia" id="melodia" rows="10" 
+              <textarea name="melodia" id="melodia" rows="14" 
                         placeholder="Partitura, notación musical, o descripción de la melodía"
                         aria-describedby="help-melodia error-melodia contador-melodia"
                         maxlength="2000"></textarea>
@@ -194,7 +194,7 @@ export const SongFormView = {
               <small class="label-subtitle">URLs de audio, descripciones o configuración de reproductor</small>
             </label>
             <div class="textarea-container">
-              <textarea name="audios" id="audios" rows="8" 
+              <textarea name="audios" id="audios" rows="14" 
                         placeholder="Enlaces de audio:&#10;https://afsalineros.es/audios/zagalejo/Zagalejo-Todos.mp3 &#10;&#10;[reproductor:[&#10;{&quot;nombre&quot;:&quot;Tenores&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Tenores.mp3&quot;},&#10;{&quot;nombre&quot;:&quot;Barítonos&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Baritonos.mp3&quot;},&#10;{&quot;nombre&quot;:&quot;Bajos&quot;, &quot;archivo&quot;:&quot;audios/isa_salinera/El-Salinero_Bajos.mp3&quot;}]]"
                         aria-describedby="help-audios error-audios contador-audios"
                         maxlength="3000"></textarea>
@@ -995,19 +995,34 @@ actualizarPreviewAcordes() {
   },
 
   /**
-   * Precarga el formulario con los datos de la canción a editar
+   * MÉTODO CORREGIDO: Precarga el formulario con los datos de la canción a editar
+   * Maneja correctamente las entidades HTML para preservar el contenido original
    */
   populate(song) {
     // Limpiar formulario primero
     this.resetearFormulario();
     
-    // Establecer valores
+    // Función helper para decodificar entidades HTML básicas
+    const decodificarHTML = (texto) => {
+      if (typeof texto !== 'string') return texto;
+      
+      return texto
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&amp;/g, '&'); // Importante: &amp; debe ir al final
+    };
+
+    // Establecer valores - decodificando HTML donde sea necesario
     this.form.id.value = song.id || '';
     this.form.titulo.value = song.titulo || '';
-    this.form.letra.value = song.letra || '';
-    this.form.acordes.value = song.acordes || '';
-    this.form.melodia.value = song.melodia || '';
-    this.form.audios.value = song.audios || '';
+    
+    // CORRECIÓN CLAVE: Decodificar HTML en campos que pueden contenerlo
+    this.form.letra.value = decodificarHTML(song.letra || '');
+    this.form.acordes.value = decodificarHTML(song.acordes || '');
+    this.form.melodia.value = decodificarHTML(song.melodia || '');
+    this.form.audios.value = decodificarHTML(song.audios || '');
     
     // Manejar etiquetas tanto como array como string
     if (Array.isArray(song.tags)) {
@@ -1040,6 +1055,13 @@ actualizarPreviewAcordes() {
     // Marcar datos originales para detectar cambios
     this.estado.datosOriginales = { ...song };
     this.estado.cambiosSinGuardar = false;
+
+    console.log('✅ Formulario cargado con datos decodificados:', {
+      id: song.id,
+      titulo: song.titulo,
+      letra: this.form.letra.value.substring(0, 100) + '...',
+      acordes: this.form.acordes.value.substring(0, 50) + '...'
+    });
   },
 
   /**

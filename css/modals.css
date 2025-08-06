@@ -321,3 +321,103 @@
   margin: var(--space-sm) 0;
   line-height: 1.5;
 }
+
+/* =================================
+   Estilos para contenido HTML en modales
+   Añadir al final de css/modals.css
+   ================================= */
+
+/* -----------------------------
+   Contenido HTML en pestañas del modal
+   ----------------------------- */
+.letra-content,
+.melodia-content {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.letra-content strong,
+.melodia-content strong {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.letra-content em,
+.melodia-content em {
+  color: var(--accent-secondary);
+  font-style: italic;
+}
+
+.letra-content u,
+.melodia-content u {
+  text-decoration: underline;
+  text-decoration-color: var(--accent-primary);
+}
+
+.letra-content br,
+.melodia-content br {
+  line-height: 2;
+}
+
+.letra-content p,
+.melodia-content p {
+  margin: var(--space-sm) 0;
+  line-height: 1.6;
+}
+
+/* -----------------------------
+   Contenido HTML en formularios
+   ----------------------------- */
+.form-tab-content textarea {
+  font-family: var(--font-mono);
+  line-height: 1.5;
+}
+
+/* Placeholder con mejor formato para campos HTML */
+.form-tab-content textarea[name="letra"]::placeholder,
+.form-tab-content textarea[name="acordes"]::placeholder,
+.form-tab-content textarea[name="melodia"]::placeholder {
+  font-family: var(--font-mono);
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+/* -----------------------------
+   Indicadores visuales para campos con HTML
+   ----------------------------- */
+.form-field label[for="letra"]::after,
+.form-field label[for="melodia"]::after {
+  content: '🏷️ HTML';
+  font-size: 0.7rem;
+  background: var(--accent-primary);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: var(--space-xs);
+  opacity: 0.8;
+}
+
+/* -----------------------------
+   Mejoras para accesibilidad
+   ----------------------------- */
+.letra-content:focus,
+.melodia-content:focus {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* -----------------------------
+   Responsive
+   ----------------------------- */
+@media (max-width: 640px) {
+  .letra-content,
+  .melodia-content {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+}

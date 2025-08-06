@@ -1,5 +1,6 @@
 // =================================
-// Archivo: src/services/validacionService.js - ARREGLO ACORDES
+// Archivo: src/services/validacionService.js - ARREGLO HTML
+// Permitir etiquetas HTML en campos específicos
 // =================================
 
 export class ValidacionService {
@@ -46,6 +47,22 @@ export class ValidacionService {
     patronURL: 'Debe ser una URL válida (http:// o https://)',
     maxEtiquetas: 'Máximo {max} etiquetas permitidas',
     maxLongitudEtiqueta: 'Cada etiqueta debe tener máximo {max} caracteres'
+  };
+
+  // NUEVO: Lista de campos que pueden contener HTML
+  static camposConHTML = [
+    'letra',    // Permitir <strong>, <em>, <br>, etc. en las letras
+    'acordes',  // Permitir HTML en acordes si es necesario
+    'melodia',  // Permitir HTML en melodía
+    'audios'    // Permitir <audio>, <video>, <iframe>, etc.
+  ];
+
+  // NUEVO: Lista de etiquetas HTML permitidas por campo
+  static etiquetasPermitidas = {
+    letra: ['strong', 'b', 'em', 'i', 'u', 'br', 'p', 'span'],
+    acordes: ['strong', 'b', 'em', 'i', 'br', 'span'],
+    melodia: ['strong', 'b', 'em', 'i', 'br', 'p', 'span'],
+    audios: ['audio', 'video', 'iframe', 'a', 'strong', 'b', 'em', 'i', 'br', 'p', 'span', 'div']
   };
 
   /**
@@ -195,8 +212,6 @@ export class ValidacionService {
     return patronAcordeFlexible.test(acorde.trim());
   }
 
-  // ... resto de métodos sin cambios ...
-  
   /**
    * Valida un formulario completo
    */
@@ -272,8 +287,8 @@ export class ValidacionService {
     };
   }
 
-   /**
-   * Sanitiza datos de entrada para prevenir XSS
+  /**
+   * MÉTODO COMPLETAMENTE REESCRITO: Sanitiza datos permitiendo HTML en campos específicos
    * @param {Object} datos - Datos a sanitizar
    * @returns {Object} Datos sanitizados
    */
@@ -287,16 +302,18 @@ export class ValidacionService {
         // Limpiar espacios extras
         valor = valor.trim();
         
-        // IMPORTANTE: NO escapar HTML en el campo 'audios'
-        // para permitir tags como <audio>, <video>, etc.
-        if (clave !== 'audios') {
-          // Escapar caracteres HTML básicos para otros campos
+        // NUEVO ENFOQUE: Solo sanitizar campos que NO deben contener HTML
+        if (!this.camposConHTML.includes(clave)) {
+          // Solo campos como 'titulo' y 'etiquetas' se escapan completamente
           valor = valor
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#x27;');
+        } else {
+          // Para campos que pueden contener HTML, hacer sanitización selectiva
+          valor = this.sanitizarHTMLSelectivo(valor, clave);
         }
       }
 
@@ -304,5 +321,49 @@ export class ValidacionService {
     });
 
     return datosSanitizados;
+  }
+
+  /**
+   * MÉTODO NUEVO: Sanitización selectiva para campos con HTML permitido
+   * @param {string} valor - Valor a sanitizar
+   * @param {string} campo - Nombre del campo
+   * @returns {string} Valor sanitizado
+   */
+  static sanitizarHTMLSelectivo(valor, campo) {
+    // Si no hay etiquetas permitidas definidas para este campo, devolver tal como está
+    const etiquetasPermitidas = this.etiquetasPermitidas[campo];
+    if (!etiquetasPermitidas) {
+      return valor;
+    }
+
+    // Para una implementación básica, permitimos las etiquetas tal como están
+    // En una implementación más robusta, usarías una librería como DOMPurify
+    
+    // Por ahora, solo eliminamos scripts y otros elementos peligrosos
+    valor = valor
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<iframe(?![^>]*src=["'](https?:\/\/|\/\/)[^"']*["'])[^>]*>[\s\S]*?<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, ''); // Eliminar atributos onclick, onload, etc.
+
+    return valor;
+  }
+
+  /**
+   * MÉTODO NUEVO: Verifica si un campo puede contener HTML
+   * @param {string} nombreCampo - Nombre del campo
+   * @returns {boolean} True si puede contener HTML
+   */
+  static puedeContenerHTML(nombreCampo) {
+    return this.camposConHTML.includes(nombreCampo);
+  }
+
+  /**
+   * MÉTODO NUEVO: Obtiene las etiquetas HTML permitidas para un campo
+   * @param {string} nombreCampo - Nombre del campo
+   * @returns {Array} Array de etiquetas permitidas
+   */
+  static obtenerEtiquetasPermitidas(nombreCampo) {
+    return this.etiquetasPermitidas[nombreCampo] || [];
   }
 }

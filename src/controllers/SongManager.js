@@ -1,4 +1,6 @@
 // src/controllers/SongManager.js
+
+// Importación de modelos y servicios necesarios
 import { Song } from '../models/songModel.js';
 import { APIService } from '../services/apiService.js';
 import { CacheService } from '../services/cacheService.js';
@@ -7,16 +9,17 @@ import { ValidacionService } from '../services/validacionService.js';
 import notificacionService from '../services/notificacionService.js';
 import { appEvents } from '../core/EventSystem.js';
 
+// Clase SongManager: gestiona canciones en la aplicación
 export class SongManager {
   constructor(appController) {
-    this.app = appController;
-    this.todasLasCanciones = [];
-    this.cancionActual = null;
-    this.subscriptions = [];
+    this.app = appController; // Referencia al controlador principal
+    this.todasLasCanciones = []; // Lista de canciones en memoria
+    this.cancionActual = null; // Canción actualmente seleccionada
+    this.subscriptions = []; // Suscripciones a eventos
   }
 
   /**
-   * Carga los datos iniciales
+   * Carga los datos al iniciar la aplicación
    */
   async loadInitialData() {
     const idCarga = notificacionService.cargando(
@@ -27,31 +30,34 @@ export class SongManager {
     try {
       await CacheService.inicializar();
       
+      // Si hay conexión, cargar desde el servidor; si no, desde caché
       if (navigator.onLine) {
         await this.cargarDatosDesdeServidor();
       } else {
         await this.cargarDatosDesdeCache();
       }
-      
+
+      // Ordena alfabéticamente las canciones
       this.ordenarCanciones();
-      
+
       notificacionService.cerrar(idCarga);
       notificacionService.exito(
         'Aplicación lista',
         `${this.todasLasCanciones.length} canciones cargadas`
       );
 
+      // Emite evento indicando que las canciones fueron cargadas
       appEvents.emit('songs:loaded', { 
         count: this.todasLasCanciones.length,
         source: navigator.onLine ? 'server' : 'cache'
       });
-      
+
     } catch (error) {
       notificacionService.cerrar(idCarga);
       console.error('Error al cargar datos iniciales:', error);
       appEvents.emit('songs:load_error', { error });
-      
-      // Intentar cargar desde cache como fallback
+
+      // Intenta recuperar datos desde la caché si falla todo
       try {
         await this.cargarDatosDesdeCache();
         this.ordenarCanciones();
@@ -61,40 +67,31 @@ export class SongManager {
     }
   }
 
-  /**
-   * Obtiene todas las canciones
-   */
+  // Devuelve todas las canciones en memoria
   getAllSongs() {
     return this.todasLasCanciones;
   }
 
-  /**
-   * Obtiene una canción por ID
-   */
+  // Busca una canción por su ID
   getSong(id) {
     return this.todasLasCanciones.find(c => String(c.id) === String(id));
   }
 
-  /**
-   * Crea una nueva canción
-   */
+  // Crea y guarda una nueva canción
   async create(datos) {
-    const idCarga = notificacionService.cargando(
-      'Guardando canción',
-      'Procesando información...'
-    );
+    const idCarga = notificacionService.cargando('Guardando canción', 'Procesando información...');
 
     try {
-      // Sanitizar y validar datos
+      // Limpia y valida los datos
       const datosSanitizados = ValidacionService.sanitizarDatos(datos);
       const validacion = ValidacionService.validarCancion(datosSanitizados);
-      
+
       if (!validacion.esCompletamenteValido) {
         notificacionService.cerrar(idCarga);
         throw new Error('Datos de canción inválidos');
       }
 
-      // Crear objeto canción
+      // Construye una instancia de Song con los datos
       const nuevaCancion = new Song({
         titulo: datosSanitizados.titulo,
         letra: datosSanitizados.letra,
@@ -106,12 +103,13 @@ export class SongManager {
       });
 
       let cancionGuardada;
-      
+
+      // Guardado online o en caché según conexión
       if (navigator.onLine) {
         try {
           const datosParaServidor = nuevaCancion.toJSON();
-          delete datosParaServidor.id; // El servidor asignará el ID
-          
+          delete datosParaServidor.id; // El servidor genera el ID
+
           cancionGuardada = await APIService.create(datosParaServidor);
           await CacheService.saveSong(cancionGuardada);
         } catch (errorServidor) {
@@ -123,11 +121,11 @@ export class SongManager {
         cancionGuardada = await CacheService.saveSong(nuevaCancion.toPlainObject());
         await SyncService.queueOrSend({ type: 'save', data: cancionGuardada });
       }
-      
-      // Actualizar lista local
+
+      // Agrega la canción a la lista local y ordena
       this.todasLasCanciones.push(Song.fromJSON(cancionGuardada));
       this.ordenarCanciones();
-      
+
       notificacionService.cerrar(idCarga);
       notificacionService.exito(
         'Canción creada',
@@ -136,11 +134,11 @@ export class SongManager {
 
       appEvents.emit('song:created', { song: cancionGuardada });
       return cancionGuardada;
-      
+
     } catch (error) {
       notificacionService.cerrar(idCarga);
       console.error('Error completo al crear canción:', error);
-      
+
       notificacionService.error(
         'Error al crear canción',
         error.message || 'No se pudo guardar la canción'
@@ -151,9 +149,7 @@ export class SongManager {
     }
   }
 
-  /**
-   * Actualiza una canción existente
-   */
+  // Actualiza los datos de una canción existente
   async update(id, datos) {
     const idCarga = notificacionService.cargando(
       'Actualizando canción',
@@ -161,16 +157,14 @@ export class SongManager {
     );
 
     try {
-      // Sanitizar y validar datos
       const datosSanitizados = ValidacionService.sanitizarDatos(datos);
       const validacion = ValidacionService.validarCancion(datosSanitizados);
-      
+
       if (!validacion.esCompletamenteValido) {
         notificacionService.cerrar(idCarga);
         throw new Error('Datos de canción inválidos');
       }
-      
-      // Crear objeto canción actualizada
+
       const cancionActualizada = new Song({
         id: id,
         titulo: datosSanitizados.titulo,
@@ -183,7 +177,7 @@ export class SongManager {
       });
 
       let cancionGuardada;
-      
+
       if (navigator.onLine) {
         try {
           const datosParaServidor = cancionActualizada.toJSON();
@@ -198,15 +192,15 @@ export class SongManager {
         cancionGuardada = await CacheService.saveSong(cancionActualizada.toPlainObject());
         await SyncService.queueOrSend({ type: 'save', data: cancionGuardada });
       }
-      
-      // Actualizar lista local
+
+      // Reemplaza la canción en la lista local
       const indice = this.todasLasCanciones.findIndex(c => c.id === id);
       if (indice !== -1) {
         this.todasLasCanciones[indice] = Song.fromJSON(cancionGuardada);
       }
-      
+
       this.ordenarCanciones();
-      
+
       notificacionService.cerrar(idCarga);
       notificacionService.exito(
         'Canción actualizada',
@@ -215,11 +209,11 @@ export class SongManager {
 
       appEvents.emit('song:updated', { song: cancionGuardada });
       return cancionGuardada;
-      
+
     } catch (error) {
       notificacionService.cerrar(idCarga);
       console.error('Error al editar canción:', error);
-      
+
       notificacionService.error(
         'Error al editar canción',
         error.message || 'No se pudieron guardar los cambios'
@@ -230,9 +224,7 @@ export class SongManager {
     }
   }
 
-  /**
-   * Elimina una canción
-   */
+  // Elimina una canción por ID
   async delete(id) {
     const cancion = this.getSong(id);
     if (!cancion) {
@@ -243,10 +235,10 @@ export class SongManager {
       'Eliminando canción',
       'Procesando solicitud...'
     );
-    
+
     try {
       await CacheService.deleteSong(id);
-      
+
       if (navigator.onLine) {
         try {
           await APIService.remove(id);
@@ -263,24 +255,21 @@ export class SongManager {
           data: { id: id } 
         });
       }
-      
-      // Actualizar lista local
+
       this.todasLasCanciones = this.todasLasCanciones.filter(c => c.id !== id);
-      
-      const tituloEliminado = cancion.titulo;
-      
+
       notificacionService.cerrar(idCarga);
       notificacionService.exito(
         'Canción eliminada',
-        `"${tituloEliminado}" se eliminó correctamente`
+        `"${cancion.titulo}" se eliminó correctamente`
       );
 
-      appEvents.emit('song:deleted', { id, titulo: tituloEliminado });
-      
+      appEvents.emit('song:deleted', { id, titulo: cancion.titulo });
+
     } catch (error) {
       notificacionService.cerrar(idCarga);
       console.error('Error al eliminar canción:', error);
-      
+
       notificacionService.error(
         'Error al eliminar',
         'No se pudo eliminar la canción'
@@ -291,16 +280,14 @@ export class SongManager {
     }
   }
 
-  /**
-   * Busca canciones por término
-   */
+  // Busca canciones según un término (en título, letra, acordes o etiquetas)
   search(termino) {
     if (!termino || termino.trim() === '') {
       return this.todasLasCanciones;
     }
-    
+
     const terminoLimpio = termino.toLowerCase().trim();
-    
+
     return this.todasLasCanciones.filter(cancion =>
       cancion.titulo.toLowerCase().includes(terminoLimpio) ||
       cancion.letra.toLowerCase().includes(terminoLimpio) ||
@@ -309,9 +296,7 @@ export class SongManager {
     );
   }
 
-  /**
-   * Filtra canciones por etiquetas
-   */
+  // Filtra canciones por un conjunto de etiquetas
   filterByTags(etiquetasSeleccionadas) {
     if (!etiquetasSeleccionadas || etiquetasSeleccionadas.size === 0) {
       return this.todasLasCanciones;
@@ -324,24 +309,20 @@ export class SongManager {
     );
   }
 
-  /**
-   * Obtiene todas las etiquetas únicas
-   */
+  // Devuelve una lista con todas las etiquetas únicas
   getAllTags() {
     const todasLasEtiquetas = Array.from(
       new Set(this.todasLasCanciones.flatMap(cancion => 
         Array.isArray(cancion.tags) ? cancion.tags : []
       ))
     );
-    
+
     return todasLasEtiquetas.sort((a, b) => 
       a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
   }
 
-  /**
-   * Establece la canción actual
-   */
+  // Establece la canción seleccionada actualmente
   setCurrentSong(id) {
     this.cancionActual = this.getSong(id);
     if (this.cancionActual) {
@@ -350,21 +331,19 @@ export class SongManager {
     return this.cancionActual;
   }
 
-  /**
-   * Obtiene la canción actual
-   */
+  // Devuelve la canción actualmente seleccionada
   getCurrentSong() {
     return this.cancionActual;
   }
 
   // ======= MÉTODOS PRIVADOS =======
 
+  // Carga canciones desde el servidor y las guarda en caché
   async cargarDatosDesdeServidor() {
     try {
       const datos = await APIService.getAll();
       this.todasLasCanciones = datos.map(cancion => Song.fromJSON(cancion));
-      
-      // Guardar en cache para uso offline
+
       for (const cancion of this.todasLasCanciones) {
         await CacheService.saveSong(cancion.toPlainObject());
       }
@@ -374,6 +353,7 @@ export class SongManager {
     }
   }
 
+  // Carga canciones desde la caché local
   async cargarDatosDesdeCache() {
     try {
       const datosCacheados = await CacheService.getAllSongs();
@@ -384,12 +364,14 @@ export class SongManager {
     }
   }
 
+  // Ordena alfabéticamente las canciones por título
   ordenarCanciones() {
     this.todasLasCanciones.sort((a, b) =>
       a.titulo.localeCompare(b.titulo, 'es', { sensitivity: 'base' })
     );
   }
 
+  // Limpia las suscripciones y datos almacenados
   destroy() {
     this.subscriptions.forEach(unsub => unsub());
     this.subscriptions = [];

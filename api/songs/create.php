@@ -64,7 +64,7 @@ try {
     
     $result = $stmt->execute([
         trim($input['titulo']),
-        trim($input['letra']),
+        isset($input['letra']) ? trim($input['letra']) : '',
         isset($input['acordes']) ? trim($input['acordes']) : '',
         isset($input['melodia']) ? trim($input['melodia']) : '',
         isset($input['audios']) ? trim($input['audios']) : '',

@@ -65,7 +65,8 @@ export class UIManager {
   }
 
   /**
-   * Muestra el modal con la información de la canción
+   * MÉTODO CORREGIDO: Muestra el modal con la información de la canción
+   * Maneja correctamente el HTML en los campos apropiados
    */
   mostrarModal(cancion) {
     if (!cancion) {
@@ -82,10 +83,13 @@ export class UIManager {
         tituloModal.textContent = cancion.titulo;
       }
 
-      // Mostrar letra
+      // CORRECCIÓN: Mostrar letra con HTML renderizado
       const tabLetra = document.getElementById('tab-letra');
       if (tabLetra) {
-        tabLetra.innerHTML = `<pre style="white-space: pre-wrap;">${cancion.letra || 'Sin letra disponible'}</pre>`;
+        // La letra puede contener HTML como <strong>, <em>, <br>, etc.
+        // La mostramos como HTML, no como texto plano
+        const letraHTML = cancion.letra || 'Sin letra disponible';
+        tabLetra.innerHTML = `<div class="letra-content" style="white-space: pre-wrap; font-family: var(--font-mono); line-height: 1.6;">${letraHTML}</div>`;
       }
 
       // Procesar acordes
@@ -107,13 +111,14 @@ export class UIManager {
         }
       }
       
-      // Mostrar melodía
+      // CORRECCIÓN: Mostrar melodía con HTML renderizado
       const tabMelodia = document.getElementById('tab-melodia');
       if (tabMelodia) {
-        tabMelodia.innerHTML = `<pre>${cancion.melodia || 'Sin información de melodía'}</pre>`;
+        const melodiaHTML = cancion.melodia || 'Sin información de melodía';
+        tabMelodia.innerHTML = `<div class="melodia-content" style="white-space: pre-wrap; font-family: var(--font-mono); line-height: 1.6;">${melodiaHTML}</div>`;
       }
       
-      // Mostrar audios
+      // Mostrar audios (ya manejaba HTML correctamente)
       this.mostrarAudios(cancion);
 
       // Resetear pestañas
