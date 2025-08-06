@@ -7,23 +7,35 @@ const DATA_CACHE_NAME = 'data-cache-v1';
 
 // Lista de ficheros que realmente existen bajo /intranet3/
 const FILES_TO_CACHE = [
-  './',                 // index.html
+  './',
   'index.html',
   'css/main.css',
   'manifest.json',
-  // Sólo inclúyelos si están en intranet3/icons/
   'icons/icon-192.png',
   'icons/icon-512.png',
-  // Tu código fuente
   'src/main.js',
+  'src/config/AppConfig.js',
+  'src/controllers/AppController.js',
+  'src/controllers/SongManager.js',
+  'src/controllers/SyncManager.js',
+  'src/controllers/UIManager.js',
+  'src/core/EventSystem.js',
+  'src/lib/acordes.js',
+  'src/lib/chord.js',
+  'src/lib/raphael-min.js',
+  'src/lib/wavesurfer.js',
   'src/models/songModel.js',
   'src/services/apiService.js',
   'src/services/cacheService.js',
+  'src/services/notificacionService.js',
   'src/services/syncService.js',
+  'src/services/validacionService.js',
   'src/ui/appStatusView.js',
-  'src/ui/songListView.js',
+  'src/ui/chordParser.js',
+  'src/ui/chordRenderer.js',
+  'src/ui/multiTrackPlayer.js',
   'src/ui/songFormView.js',
-  'src/ui/chordParser.js'
+  'src/ui/songListView.js',
 ];
 
 self.addEventListener('install', evt => {
