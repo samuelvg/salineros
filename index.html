@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Los Salineros</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/main.css">
+
+  <!-- Estilos de FullCalendar (dayGrid, timeGrid, list) -->
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/index.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/index.min.css" rel="stylesheet">
+
+<script type="importmap">
+  {
+    "imports": {
+      "dexie": "https://cdn.jsdelivr.net/npm/dexie@3.2.2/dist/dexie.mjs"
+    }
+  }
+  </script>
+
+  <meta name="calendar-ics" content="https://calendar.google.com/calendar/ical/9884596dc4476ef8f92b43903a8ac4a25b33fedc642615ec1aeaadff095cf859%40group.calendar.google.com/private-a317d220bdd515ef7d74448deb913892/basic.ics">
+</head>
+<body>
+  <!-- Botón flotante -->
+  <button id="open-calendar-btn" aria-label="Abrir calendario" title="Calendario">📅</button>
+
+  <!-- Modal del calendario -->
+  <div id="calendar-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-title">
+    <div class="calendar-modal-content">
+      <button class="close-button" id="close-calendar-btn" aria-label="Cerrar calendario">&times;</button>
+      <div id="fullcalendar"></div>
+    </div>
+  </div>
+
+  <!-- Título y estructura de la app -->
+  <h1 class="app-title">LOS SALINEROS</h1>
+  <div id="filter-container"></div>
+  <div id="app"></div>
+  <div id="status-bar"></div>
+
+  <!-- Bundle de la aplicación -->
+   <script src="src/lib/raphael-min.js"></script>
+   <script src="src/lib/chord.js"></script>
+   <script src="src/lib/acordes.js"></script>
+   <script src="src/lib/wavesurfer.js"></script>
+
+   <!-- Script principal de tu app -->
+   <script type="module" src="src/main.js"></script>
+ 
+
+  <button id="fab-admin" class="fab-admin" aria-label="Admin">⚙️</button>
+<script type="module">
+  import { AdminMode } from './src/core/AdminMode.js';
+  const btn = document.getElementById('fab-admin');
+  btn.addEventListener('click', async () => {
+    if (AdminMode.isEnabled()) {
+      if (confirm('¿Desactivar modo admin?')) {
+        // Cierra sesión en el backend también
+        try { await fetch('/intranet2/api/logout.php', { method: 'POST', credentials: 'include' }); } catch { }
+        AdminMode.setEnabled(false);
+      }
+      return;
+    }
+    const pwd = prompt('Contraseña de administrador');
+    if (!pwd) return;
+    try {
+      const resp = await fetch('/intranet2/api/login.php', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data?.ok) throw new Error(data?.error || 'Login fallido');
+      AdminMode.setEnabled(true);
+      alert('Modo admin activado');
+    } catch (e) {
+      alert('No autorizado');
+      console.error(e);
+    }
+  });
+</script>
+</body>
+</html>

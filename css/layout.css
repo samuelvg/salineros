@@ -1,0 +1,485 @@
+/* =================================
+   LOS SALINEROS - Layout y estructura
+   ================================= */
+
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+#app, #calendar-modal, .calendar-modal-content {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* -----------------------------
+   Header principal
+   ----------------------------- */
+.app-title {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 212, 170, 0.2);
+  
+  text-align: center;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  
+  padding: var(--space-lg) var(--space-md);
+  margin: 0;
+  
+  background-image: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* -----------------------------
+   Barra de estado
+   ----------------------------- */
+#status-bar {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  font-size: 0.85rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all var(--transition-smooth);
+}
+
+.status-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-online {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+.status-online::before { background: #4caf50; }
+
+.status-offline {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  border-color: rgba(244, 67, 54, 0.3);
+}
+.status-offline::before { background: #f44336; }
+
+/* -----------------------------
+   Filtros de etiquetas MEJORADO
+   ----------------------------- */
+#filter-container {
+  display: flex;
+  flex-wrap: wrap; /* PERMITE SALTO DE LÍNEA */
+  justify-content: center; /* CENTRA HORIZONTALMENTE */
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  
+  /* ELIMINAR scroll horizontal */
+  overflow: visible;
+  scroll-snap-type: none;
+  -webkit-overflow-scrolling: auto;
+  scrollbar-width: auto;
+  -ms-overflow-style: auto;
+  
+  /* Animar la aparición de nuevos elementos */
+  transition: all var(--transition-smooth);
+}
+
+/* ELIMINAR estilos de scrollbar oculta */
+#filter-container::-webkit-scrollbar {
+  display: block;
+  width: auto;
+  height: auto;
+}
+
+.filter-btn {
+  flex-shrink: 0; /* MANTENER TAMAÑO MÍNIMO */
+  scroll-snap-align: none; /* QUITAR SNAP */
+  
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-xl);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  
+  /* Tamaño mínimo para legibilidad */
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.filter-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-gradient);
+  transition: left var(--transition-smooth);
+  z-index: -1;
+}
+
+.filter-btn:hover::before,
+.filter-btn.active::before {
+  left: 0;
+}
+
+.filter-btn:hover,
+.filter-btn.active {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Animación para etiquetas que aparecen */
+.filter-btn {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Indicador de número de etiquetas activas */
+.filter-counter {
+  display: inline-block;
+  background: var(--accent-primary);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 50%;
+  margin-left: var(--space-xs);
+  min-width: 18px;
+  height: 18px;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* Estado cuando no hay etiquetas */
+.filter-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: var(--space-md);
+  opacity: 0.7;
+}
+
+/* -----------------------------
+   Responsive para filtros
+   ----------------------------- */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  #filter-container {
+    gap: var(--space-xs);
+    padding: 0 var(--space-md) var(--space-md);
+  }
+  
+  .filter-btn {
+    font-size: 0.85rem;
+    padding: var(--space-xs) var(--space-md);
+    min-height: 32px;
+  }
+}
+
+/* Móviles */
+@media (max-width: 640px) {
+  #filter-container {
+    gap: var(--space-xs);
+    padding: 0 var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-md);
+  }
+  
+  .filter-btn {
+    font-size: 0.8rem;
+    padding: var(--space-xs) var(--space-sm);
+    min-height: 30px;
+    border-radius: var(--radius-md);
+  }
+  
+  .filter-counter {
+    font-size: 0.7rem;
+    min-width: 16px;
+    height: 16px;
+    line-height: 12px;
+  }
+}
+
+/* Móviles pequeños */
+@media (max-width: 480px) {
+  #filter-container {
+    gap: 4px;
+    padding: 0 var(--space-xs) var(--space-sm);
+  }
+  
+  .filter-btn {
+    font-size: 0.75rem;
+    padding: 6px var(--space-sm);
+    min-height: 28px;
+  }
+}
+
+/* Altura reducida - filtros más compactos */
+@media (max-height: 600px) {
+  #filter-container {
+    margin-bottom: var(--space-sm);
+    padding: 0 var(--space-md) var(--space-sm);
+  }
+  
+  .filter-btn {
+    min-height: 24px;
+    padding: 4px var(--space-sm);
+    font-size: 0.8rem;
+  }
+}
+
+/* Interacciones táctiles mejoradas */
+@media (hover: none) and (pointer: coarse) {
+  .filter-btn {
+    min-height: 44px; /* Tamaño mínimo para toque */
+    min-width: 44px;
+  }
+  
+  .filter-btn:hover {
+    transform: none;
+  }
+  
+  .filter-btn:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+  }
+}
+
+/* -----------------------------
+   Estados especiales
+   ----------------------------- */
+
+/* Cuando se están cargando las etiquetas */
+.filter-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.filter-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 212, 170, 0.3);
+  border-top: 2px solid var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: var(--space-sm);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Botón para limpiar filtros */
+.filter-clear {
+  background: rgba(244, 67, 54, 0.1) !important;
+  color: var(--error) !important;
+  border-color: rgba(244, 67, 54, 0.3) !important;
+}
+
+.filter-clear::before {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%) !important;
+}
+
+.filter-clear:hover,
+.filter-clear.active {
+  color: white !important;
+  border-color: var(--error) !important;
+}
+
+/* Efecto de ondas al hacer clic */
+.filter-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.filter-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+  pointer-events: none;
+}
+
+.filter-btn:active::after {
+  width: 120%;
+  height: 120%;
+  transition: width 0.1s ease, height 0.1s ease;
+}
+
+/* -----------------------------
+   Modo dark/light (si se implementa)
+   ----------------------------- */
+@media (prefers-color-scheme: light) {
+  .filter-btn {
+    background: rgba(255, 255, 255, 0.8);
+    color: #333;
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  .filter-btn:hover,
+  .filter-btn.active {
+    color: white;
+  }
+}
+
+/* -----------------------------
+   Accesibilidad mejorada
+   ----------------------------- */
+.filter-btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 212, 170, 0.2);
+}
+
+/* Reducir movimiento para usuarios sensibles */
+@media (prefers-reduced-motion: reduce) {
+  .filter-btn {
+    animation: none;
+    transition: none;
+  }
+  
+  .filter-btn:hover,
+  .filter-btn.active {
+    transform: none;
+  }
+  
+  .filter-btn::before,
+  .filter-btn::after {
+    display: none;
+  }
+}
+
+/* -----------------------------
+   Botón flotante de agregar
+   ----------------------------- */
+.btn-add-floating {
+  position: fixed;
+  bottom: var(--space-xl);
+  right: var(--space-lg);
+  z-index: 100;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  
+  background: var(--accent-gradient);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 50%;
+  box-shadow: var(--shadow-strong);
+  cursor: pointer;
+  
+  font-size: 1.5rem;
+  font-weight: 700;
+  
+  transition: all var(--transition-bouncy);
+  overflow: hidden;
+}
+
+.btn-add-floating::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.6s ease-out;
+}
+
+.btn-add-floating:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+.btn-add-floating:hover {
+  transform: scale(1.1) translateY(-4px);
+  box-shadow: var(--shadow-glow), var(--shadow-strong);
+}
+
+.btn-add-floating:active {
+  transform: scale(0.95);
+  transition: transform var(--transition-fast);
+}
+
+.add-icon {
+  position: relative;
+  z-index: 1;
+  transition: transform var(--transition-smooth);
+}
+
+.btn-add-floating:hover .add-icon {
+  transform: rotate(45deg);
+}
+
+.add-text {
+  display: none;
+}
