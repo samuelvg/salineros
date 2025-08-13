@@ -125,26 +125,49 @@
 /*---------------------
   Iconos
   ----------------------*/
+/* Fila: 4 columnas fijas (25% cada una) y mantienen su sitio aunque estén "ocultas" */
 .icon-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Variables para ajustar tamaños rápido */
+.icon-row {
+  --icon-size: 1.5rem;   /* tamaño del emoji/ícono */
+  --label-size: 0.85rem; /* tamaño del texto */
 }
 
 .icon-slot {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  padding: .35rem 0;
+  min-height: 3rem; /* asegura alineación limpia */
   text-align: center;
-  font-size: 0.85rem;
   color: rgb(227, 235, 114);
   opacity: 1;
-  transition: opacity 0.2s ease;
+  transition: opacity .2s ease, transform .12s ease;
 }
 
-.icon-slot.oculto {
-  opacity: 0;
-  pointer-events: none;
+/* Tamaños separados */
+.icon-slot .icon {
+  font-size: var(--icon-size);
+  line-height: 1;
 }
+.icon-slot .label {
+  font-size: var(--label-size);
+}
+
+/* Mantener el hueco sin mostrar el contenido */
+.icon-slot.oculto {
+  visibility: hidden;      /* conserva el espacio */
+  pointer-events: none;    /* no interactúa */
+}
+
+/* (Opcional) feedback al pasar el ratón */
+.icon-slot:not(.oculto):hover { transform: translateY(-1px); }
 
 /*-----------*/
 

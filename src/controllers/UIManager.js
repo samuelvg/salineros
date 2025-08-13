@@ -19,6 +19,8 @@ import { appEvents } from '../core/EventSystem.js';
 // NUEVO
 import { AdminMode } from '../core/AdminMode.js';
 import { transposeText, convertNotation } from '../core/ChordTools.js';
+//import { convertNotation, transposeText } from '../core/ChordTools.js';
+
 
 export class UIManager {
   constructor(appController) {
@@ -128,10 +130,7 @@ export class UIManager {
       const tabAcordes = document.getElementById('tab-acordes');
       if (tabAcordes) {
         try {
-          tabAcordes.innerHTML = `<div class="acordes-html" data-original=""></div>`;
-          const acordesEl = tabAcordes.querySelector('.acordes-html');
-          acordesEl.setAttribute('data-original', (cancion.acordes || ''));
-          acordesEl.innerHTML = procesarCancion(cancion.acordes || '');
+          tabAcordes.innerHTML = procesarCancion(cancion.acordes || '');
           const cont = document.createElement('div');
           cont.className = 'diagram-container';
           tabAcordes.appendChild(cont);
@@ -168,6 +167,8 @@ export class UIManager {
 
       // Asegurar barra de herramientas (una sola vez)
       this._asegurarBarraHerramientas();
+      const tb = document.getElementById('song-tools'); if (tb) tb.classList.remove('hidden');
+      try { this.updateToolbarForTab?.('letra'); } catch {}
 
       // Visibilidad admin
       if (AdminMode.isEnabled()) document.documentElement.classList.add('admin-on');
@@ -196,6 +197,7 @@ export class UIManager {
     const btnSong = document.querySelector('.song-btn[data-id]');
     if (btnSong) btnSong.focus();
 
+    const tb=document.getElementById('song-tools'); if (tb) tb.classList.add('hidden');
     appEvents.emit('modal:closed');
   }
 
@@ -212,125 +214,147 @@ export class UIManager {
       const activa = contenido.id === `tab-${nombrePestana}`;
       contenido.classList.toggle('active', activa);
     });
+    try { this.updateToolbarForTab?.(nombrePestana); } catch {}
   }
 
   // ==========================================================
-  // Barra flotante de herramientas (única)
-  // ==========================================================
-  _asegurarBarraHerramientas() {
+  // Barra flotante de herramientas (
+_asegurarBarraHerramientas() {
     let toolbar = document.getElementById('song-tools');
-    if (toolbar) return; // ya existe
+    if (!toolbar) {
+      toolbar = document.createElement('div');
+      toolbar.id = 'song-tools';
+      toolbar.className = 'song-tools hidden'; // se muestra al abrir modal
+      toolbar.innerHTML = `
+        <button class="tool-btn" id="tool-font-plus" title="Aumentar tamaño">A+</button>
+        <button class="tool-btn" id="tool-font-minus" title="Disminuir tamaño">A-</button>
+        <button class="tool-btn" id="tool-transpose-up" title="Subir semitono">+½</button>
+        <button class="tool-btn" id="tool-transpose-down" title="Bajar semitono">-½</button>
+        <button class="tool-btn" id="tool-notation" title="Cambiar notación">ES/EN</button>
+        <div class="admin-only tool-split"></div>
+        <button class="tool-btn admin-only" id="tool-edit">Editar</button>
+        <button class="tool-btn admin-only" id="tool-delete">Borrar</button>
+      `;
+      document.body.appendChild(toolbar);
 
-    toolbar = document.createElement('div');
-    toolbar.id = 'song-tools';
-    toolbar.className = 'song-tools';
-    toolbar.innerHTML = `
-      <button class="tool-btn" id="tool-font-plus" title="Aumentar tamaño">A+</button>
-      <button class="tool-btn" id="tool-font-minus" title="Disminuir tamaño">A-</button>
-      <button class="tool-btn" id="tool-transpose-up" title="Subir semitono">+½</button>
-      <button class="tool-btn" id="tool-transpose-down" title="Bajar semitono">-½</button>
-      <button class="tool-btn" id="tool-notation" title="Cambiar notación">ES/EN</button>
-      <div class="admin-only tool-split"></div>
-      <button class="tool-btn admin-only" id="tool-edit">Editar</button>
-      <button class="tool-btn admin-only" id="tool-delete">Borrar</button>
-    `;
-    document.body.appendChild(toolbar);
+      // Guardar referencia para uso externo
+      this.elementosUI = this.elementosUI || {};
+      this.elementosUI.toolbar = toolbar;
 
-    // Tamaño de fuente
-    const applyFont = () => {
-      const cuerpo = this.elementosUI?.modalBody || document.querySelector('.modal-body');
-      if (cuerpo) cuerpo.style.fontSize = this.fontSize + 'px';
-      this.saveUIPrefs();
-    };
-    toolbar.querySelector('#tool-font-plus').addEventListener('click', () => {
-      this.fontSize = Math.min(this.fontSize + 2, 40);
-      applyFont();
-    });
-    toolbar.querySelector('#tool-font-minus').addEventListener('click', () => {
-      this.fontSize = Math.max(this.fontSize - 2, 12);
-      applyFont();
-    });
-
-    // Transposición
-    const applyTranspose = (delta) => {
-      this.transposicion = (this.transposicion + delta + 12) % 12;
-      // Letra
-      const letraEl = document.querySelector('.modal-body .letra-html');
-      if (letraEl) {
-        const base = letraEl.getAttribute('data-original') || letraEl.innerHTML;
-        const en = convertNotation(base, 'EN');
-        const trans = transposeText(en, delta);
-        const finalTxt = (this.notacion === 'ES') ? convertNotation(trans, 'ES') : trans;
-        letraEl.innerHTML = finalTxt;
-        letraEl.setAttribute('data-original', base);
-      }
-      // Acordes
-      const acordesEl = document.querySelector('.modal-body .acordes-html');
-      if (acordesEl) {
-        const orig = acordesEl.getAttribute('data-original') || '';
-        let en2 = convertNotation(orig, 'EN');
-        en2 = transposeText(en2, delta);
-        const final2 = (this.notacion === 'ES') ? convertNotation(en2, 'ES') : en2;
-        acordesEl.innerHTML = procesarCancion(final2);
-      }
-      this.saveUIPrefs();
-    };
-    toolbar.querySelector('#tool-transpose-up').addEventListener('click', () => applyTranspose(1));
-    toolbar.querySelector('#tool-transpose-down').addEventListener('click', () => applyTranspose(-1));
-
-    // Notación ES/EN
-    toolbar.querySelector('#tool-notation').addEventListener('click', () => {
-      this.notacion = (this.notacion === 'ES') ? 'EN' : 'ES';
-      // Letra
-      const letraEl = document.querySelector('.modal-body .letra-html');
-      if (letraEl) {
-        const txt = letraEl.innerHTML;
-        const out = (this.notacion === 'ES') ? convertNotation(txt, 'ES') : convertNotation(txt, 'EN');
-        letraEl.innerHTML = out;
-      }
-      // Acordes
-      const acordesEl = document.querySelector('.modal-body .acordes-html');
-      if (acordesEl) {
-        const orig = acordesEl.getAttribute('data-original') || '';
-        let en2 = convertNotation(orig, 'EN');
-        if (this.transposicion && Number.isInteger(this.transposicion)) {
-          en2 = transposeText(en2, this.transposicion);
+      // Tamaño de fuente (aplica al tab activo y persiste)
+      const applyFont = () => {
+        const activeTab = document.querySelector('.modal-body .tab-content.active');
+        if (activeTab) {
+          activeTab.style.fontSize = (this.fontSize || 18) + 'px';
+          const letra = activeTab.querySelector('.letra-html');
+          if (letra) letra.style.fontSize = (this.fontSize || 18) + 'px';
         }
-        const final2 = (this.notacion === 'ES') ? convertNotation(en2, 'ES') : en2;
-        acordesEl.innerHTML = procesarCancion(final2);
-      }
-      this.saveUIPrefs();
-    });
+        // además, sincronizamos letra y acordes por si el usuario cambia de pestaña
+        const letraTab = document.getElementById('tab-letra');
+        const acordesTab = document.getElementById('tab-acordes');
+        if (letraTab) letraTab.style.fontSize = (this.fontSize || 18) + 'px';
+        if (acordesTab) acordesTab.style.fontSize = (this.fontSize || 18) + 'px';
+        this.saveUIPrefs?.();
+      };
+      toolbar.querySelector('#tool-font-plus').addEventListener('click', () => {
+        this.fontSize = Math.min((this.fontSize || 18) + 2, 40);
+        applyFont();
+      });
+      toolbar.querySelector('#tool-font-minus').addEventListener('click', () => {
+        this.fontSize = Math.max((this.fontSize || 18) - 2, 12);
+        applyFont();
+      });
 
-    // Admin: editar/borrar usando el SongManager actual
-    toolbar.querySelector('#tool-edit').addEventListener('click', () => {
-      const current = this.app?.songManager?.getCurrentSong?.();
-      if (!current) return;
-      if (this.app?.songManager?.editarCancion) this.app.songManager.editarCancion(current.id);
-      else appEvents.emit('song:edit', { id: current.id });
-    });
-    toolbar.querySelector('#tool-delete').addEventListener('click', async () => {
-      const current = this.app?.songManager?.getCurrentSong?.();
-      if (!current) return;
-      if (confirm(`¿Eliminar "${current.titulo}"?`)) {
-        try {
-          if (this.app?.songManager?.eliminarCancion) {
-            await this.app.songManager.eliminarCancion(current.id);
-          } else {
-            appEvents.emit('song:delete', { id: current.id });
+      // Transposición (reconstruye la pestaña Acordes desde la fuente original)
+      const renderChordsFromState = () => {
+        const current = this.app?.songManager?.getCurrentSong?.();
+        if (!current) return;
+        const original = (current.acordes || '').toString();
+        const acordesTab = document.getElementById('tab-acordes');
+        if (!acordesTab) return;
+        let txt = convertNotation(original, 'EN');
+        if (Number.isInteger(this.transposicion) && this.transposicion) {
+          txt = transposeText(txt, this.transposicion);
+        }
+        if (this.notacion === 'ES') {
+          txt = convertNotation(txt, 'ES');
+        }
+        // reconstruir HTML y diagramas
+        acordesTab.innerHTML = procesarCancion(txt);
+        const cont = document.createElement('div');
+        cont.className = 'diagram-container';
+        acordesTab.appendChild(cont);
+        try { mostrarAcordesUtilizados(txt, cont); } catch {}
+      };
+
+      const applyTransposeDelta = (delta) => {
+        this.transposicion = ((this.transposicion || 0) + delta + 12) % 12;
+        renderChordsFromState();
+        this.saveUIPrefs?.();
+      };
+      toolbar.querySelector('#tool-transpose-up').addEventListener('click', () => applyTransposeDelta(1));
+      toolbar.querySelector('#tool-transpose-down').addEventListener('click', () => applyTransposeDelta(-1));
+
+      // Notación ES/EN (sólo relevante para acordes)
+      toolbar.querySelector('#tool-notation').addEventListener('click', () => {
+        this.notacion = (this.notacion === 'EN') ? 'ES' : 'EN';
+        renderChordsFromState();
+      });
+
+      // Editar / Borrar
+      toolbar.querySelector('#tool-edit').addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const current = this.app?.songManager?.getCurrentSong?.();
+        if (!current) return;
+        this.cerrarModal();
+        this.mostrarFormularioEditarCancion?.();
+      });
+      toolbar.querySelector('#tool-delete').addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        const current = this.app?.songManager?.getCurrentSong?.();
+        if (!current) return;
+        if (confirm(`¿Eliminar "${current.titulo}"?`)) {
+          try {
+            if (this.app?.songManager?.eliminarCancion) {
+              await this.app.songManager.eliminarCancion(current.id);
+            } else {
+              appEvents.emit('song:delete', { id: current.id });
+            }
+            this.cerrarModal();
+            this.updateSongList?.();
+          } catch (e) {
+            notificacionService.mostrar({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudo eliminar.' });
           }
-          this.cerrarModal();
-          this.updateSongList();
-        } catch (e) {
-          notificacionService.mostrar({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudo eliminar.' });
         }
-      }
-    });
+      });
 
-    // Visibilidad de controles admin
-    if (AdminMode.isEnabled()) document.documentElement.classList.add('admin-on');
-    else document.documentElement.classList.remove('admin-on');
+      // Helper: visibilidad de botones según pestaña
+      this.updateToolbarForTab = (tabName) => {
+        const btnUp = toolbar.querySelector('#tool-transpose-up');
+        const btnDown = toolbar.querySelector('#tool-transpose-down');
+        const btnNotation = toolbar.querySelector('#tool-notation');
+        // A+/A- siempre, ±½ y ES/EN sólo en "acordes"
+        const acordes = tabName === 'acordes';
+        [btnUp, btnDown, btnNotation].forEach(el => { if (el) el.classList.toggle('hidden', !acordes); });
+        // Asegurar tamaño actual aplicado
+        const activeTab = document.querySelector('.modal-body .tab-content.active');
+        if (activeTab) activeTab.style.fontSize = (this.fontSize || 18) + 'px';
+      };
+
+      // Estado inicial de preferencias si no existe
+      if (typeof this.fontSize !== 'number') this.fontSize = 18;
+      if (!this.notacion) this.notacion = 'ES';
+      if (!Number.isInteger(this.transposicion)) this.transposicion = 0;
+    }
+
+    // Actualizar clase admin-on según modo
+    if (typeof AdminMode !== 'undefined' && AdminMode.isEnabled?.()) {
+      document.documentElement.classList.add('admin-on');
+    } else {
+      document.documentElement.classList.remove('admin-on');
+    }
   }
+  
 
   // ==========================================================
   // Preferencias UI
@@ -365,21 +389,10 @@ export class UIManager {
     if (this.notacion === 'ES') {
       txt = convertNotation(txt, 'ES');
     }
-    
-    // Acordes
-    const acordesEl = document.querySelector('.modal-body .acordes-html');
-    if (acordesEl) {
-      const orig = acordesEl.getAttribute('data-original') || '';
-      let en2 = convertNotation(orig, 'EN');
-      if (this.transposicion && Number.isInteger(this.transposicion)) {
-        en2 = transposeText(en2, this.transposicion);
-      }
-      const final2 = (this.notacion === 'ES') ? convertNotation(en2, 'ES') : en2;
-      acordesEl.innerHTML = procesarCancion(final2);
-    }
+    letraEl.innerHTML = txt;
+  }
 
   // ==========================================================
-  }
   // Estructura/DOM existentes
   // ==========================================================
   async crearElementosUIAdaptados() {
@@ -485,13 +498,25 @@ export class UIManager {
     const botonEliminar = modal.querySelector('#btn-delete-song');
 
     if (botonEditar) {
-      botonEditar.addEventListener('click', () => {
-        const current = this.app.songManager.getCurrentSong();
-        if (!current) return;
-        this.cerrarModal();
-        this.mostrarFormularioEditarCancion();
-      });
+    botonEditar.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const current = this.app.songManager.getCurrentSong();
+    if (!current) {
+      notificacionService?.advertencia?.('No hay canción seleccionada', 'Selecciona una canción en la lista primero.');
+      return;
     }
+
+    // (opcional) refuerza el estado por si acaso
+    this.app.songManager.setCurrentSong?.(current);
+
+    this.cerrarModal();
+
+    // 👇👇 LA CLAVE: pásale la canción (o su id) a la función
+    this.mostrarFormularioEditarCancion(current);
+  });
+}
 
     if (botonEliminar) {
       botonEliminar.addEventListener('click', async () => {
@@ -571,21 +596,67 @@ export class UIManager {
     appEvents.emit('ui:form:open', { formType: 'create' });
   }
 
-  mostrarFormularioEditarCancion() {
-    const current = this.app.songManager.getCurrentSong();
-    if (!current) return;
-
-    const tituloFormulario = document.getElementById('form-title');
-    if (tituloFormulario) tituloFormulario.textContent = 'Editar Canción';
-
-    SongFormView.populate(current);
-    this.elementosUI.contenedorFormulario.classList.remove('hidden');
-    setTimeout(() => { document.getElementById('titulo')?.focus(); }, 50);
-    appEvents.emit('ui:form:open', { formType: 'edit', song: current });
+  mostrarFormularioEditarCancion(songOrId = null, evt = null) {
+  // 1) Intentar resolver la canción desde el argumento
+  let song = null;
+  let id = null;
+  if (songOrId && typeof songOrId === 'object' && songOrId.id) {
+    song = songOrId;
+  } else if (songOrId && (typeof songOrId === 'string' || typeof songOrId === 'number')) {
+    id = String(songOrId);
   }
+  // 2) Si viene de un click, intentar sacar el id del DOM más cercano
+  if (!song && !id && evt && evt.target) {
+    const host = evt.target.closest?.('[data-song-id], [data-id]');
+    if (host) id = host.dataset.songId || host.dataset.id || null;
+  }
+  // 3) Si no hay id aún, intentar con la fila/tarjeta seleccionada en la lista
+  if (!song && !id) {
+    const selected = document.querySelector('.song-item.selected,[data-selected="true"][data-song-id],[data-selected="true"][data-id]');
+    if (selected) id = selected.dataset.songId || selected.dataset.id || null;
+  }
+  // 4) Resolver desde el manager por id si lo tenemos
+  if (!song && id) {
+    const sm = this.app?.songManager;
+    song = (sm?.getSongById?.(id) || sm?.getById?.(id) || null);
+    if (song && sm?.setCurrentSong) sm.setCurrentSong(song); // fijar como actual
+  }
+  // 5) Último intento: “canción actual” del manager
+  if (!song) {
+    try { song = this.app?.songManager?.getCurrentSong?.() || null; } catch {}
+  }
+  // 6) Si seguimos sin canción, avisamos y paramos
+  if (!song || !song.id) {
+    notificacionService?.advertencia?.(
+      'No hay canción seleccionada',
+      'Selecciona una canción en la lista o usa el botón Editar dentro de esa canción.'
+    );
+    return;
+  }
+
+  // 7) Poner título del formulario y rellenar
+  const tituloFormulario = document.getElementById('form-title');
+  if (tituloFormulario) tituloFormulario.textContent = 'Editar Canción';
+
+  // Rellenar con seguridad (tu populate ya es robusto)
+  SongFormView.populate(song, 'edit');
+
+  // 8) Mostrar el contenedor del formulario con seguridad
+  const cont = this.elementosUI?.contenedorFormulario;
+  if (cont) {
+    cont.classList.remove('hidden');
+    cont.style.display = 'flex'; // forzar visibilidad ante estilos “traviesos”
+  }
+
+  // 9) Foco y evento
+  setTimeout(() => document.getElementById('titulo')?.focus?.(), 50);
+  appEvents.emit('ui:form:open', { formType: 'edit', song });
+}
+
 
   cerrarFormulario() {
     this.elementosUI.contenedorFormulario.classList.add('hidden');
+    this.elementosUI.contenedorFormulario.style.display = ''; // limpia override
     try { SongFormView.form?.reset?.(); } catch {}
     setTimeout(() => { this.elementosUI.botonAgregar?.focus?.(); }, 50);
     appEvents.emit('ui:form:close');

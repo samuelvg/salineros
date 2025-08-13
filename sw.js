@@ -2,7 +2,7 @@
 // Archivo: sw.js
 // ============================================
 
-const CACHE_NAME = 'static-cache-v3';
+const CACHE_NAME = 'static-cache-v2';
 const DATA_CACHE_NAME = 'data-cache-v1';
 
 // Lista de ficheros que realmente existen bajo /intranet3/

@@ -21,7 +21,7 @@
   }
   </script>
 
-  <meta name="calendar-ics" content="https://calendar.google.com/calendar/ical/9884596dc4476ef8f92b43903a8ac4a25b33fedc642615ec1aeaadff095cf859%40group.calendar.google.com/private-a317d220bdd515ef7d74448deb913892/basic.ics">
+  <meta name="calendar-ics" content="/intranet2/api/calendar.php">
 </head>
 <body>
   <!-- Botón flotante -->
@@ -58,8 +58,7 @@
   btn.addEventListener('click', async () => {
     if (AdminMode.isEnabled()) {
       if (confirm('¿Desactivar modo admin?')) {
-        // Cierra sesión en el backend también
-        try { await fetch('/intranet2/api/logout.php', { method: 'POST', credentials: 'include' }); } catch { }
+        try { await fetch('/intranet2/api/logout.php', { method:'POST', credentials:'include' }); } catch {}
         AdminMode.setEnabled(false);
       }
       return;
@@ -68,8 +67,7 @@
     if (!pwd) return;
     try {
       const resp = await fetch('/intranet2/api/login.php', {
-        method: 'POST',
-        credentials: 'include',
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pwd })
       });
@@ -84,4 +82,6 @@
   });
 </script>
 </body>
+</html>
+
 </html>

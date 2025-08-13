@@ -1,28 +1,24 @@
 <?php
 declare(strict_types=1);
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-require_once __DIR__ . '/../songs/bootstrap.php';
+require_once __DIR__ . '/songs/bootstrap.php';
 allow_cors();
+header('Content-Type: application/json; charset=utf-8');
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
-  http_response_code(204); exit;
-}
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') { http_response_code(204); exit; }
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') { json_response(['error'=>'Método no permitido'], 405); }
 
-$data = json_input();
-$pass = isset($data['password']) ? (string)$data['password'] : '';
-if ($pass === '') {
-  json_response(['ok'=>false,'error'=>'Password requerida'], 400);
-}
+$in = json_input();
+$pwd = isset($in['password']) ? (string)$in['password'] : '';
 
 $expected = get_admin_password_clear();
 if (!$expected) {
   json_response(['ok'=>false,'error'=>'Password no configurada'], 500);
 }
 
-if (!hash_equals($expected, $pass)) {
+if (!hash_equals($expected, $pwd)) {
   json_response(['ok'=>false,'error'=>'Credenciales inválidas'], 401);
 }
 
-// Login OK: activa sesión admin
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 $_SESSION['is_admin'] = true;
 json_response(['ok'=>true]);

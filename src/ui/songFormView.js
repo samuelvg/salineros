@@ -639,52 +639,99 @@ actualizarPreviewAcordes() {
   /**
    * Maneja el envío del formulario
    */
-  async manejarEnvioFormulario() {
-    // Validar todo el formulario
-    const esValido = this.validateForm();
-    if (!esValido) {
+  // Asegúrate de que esto esté dentro del objeto/clase SongFormView
+// y de que this.form exista y tengas this.callbacks.onEditSubmit / onCreateSubmit enlazados.
+
+manejarEnvioFormulario: async function (ev) {
+  try {
+    ev.preventDefault();
+
+    if (!this.form) {
+      console.error('Formulario no inicializado en SongFormView');
       return;
     }
 
-    // Recopilar datos
-    const datos = this.recopilarDatosFormulario();
-    
-    // Sanitizar datos
-    const datosSanitizados = ValidacionService.sanitizarDatos(datos);
-    
-    // Deshabilitar botón de envío
-    const botonEnviar = this.form.querySelector('#btn-submit');
-    const textoBoton = this.form.querySelector('#submit-text');
-    const iconoBoton = this.form.querySelector('#submit-icon');
-    
-    const textoOriginal = textoBoton.textContent;
-    const iconoOriginal = iconoBoton.textContent;
-    
-    botonEnviar.disabled = true;
-    textoBoton.textContent = 'Guardando...';
-    iconoBoton.textContent = '⏳';
+    const mode = (this.form.dataset.mode || 'create').toLowerCase();
+    const fd = new FormData(this.form);
 
-    try {
-      // Llamar al callback apropiado
-      if (datos.id && this.onEditSubmit) {
-        await this.onEditSubmit(datosSanitizados);
-      } else if (this.onCreateSubmit) {
-        await this.onCreateSubmit(datosSanitizados);
+    // --- Recogida básica de valores ---
+    const get = (name, def = '') => {
+      const v = fd.get(name);
+      return v == null ? def : String(v);
+    };
+
+    // ID desde el form (si existe)
+    let id = get('id', '').trim();
+
+    // Si estamos en edición y no hay id aún, intentamos resolverlo de varias fuentes
+    if (mode === 'edit' && !id) {
+      // 1) Desde el manager (canción actual)
+      try {
+        const current = window.app?.songManager?.getCurrentSong?.();
+        if (current?.id) id = String(current.id);
+      } catch {}
+
+      // 2) Desde el DOM cercano (por si el form está dentro de una tarjeta con data-song-id)
+      if (!id) {
+        const host =
+          this.form.closest?.('[data-song-id],[data-id]') ||
+          document.querySelector?.('.song-item.selected,[data-selected="true"][data-song-id],[data-selected="true"][data-id]');
+        const domId = host?.dataset.songId || host?.dataset.id;
+        if (domId) id = String(domId);
       }
-      
-      // Marcar como guardado
-      this.estado.cambiosSinGuardar = false;
-      
-    } catch (error) {
-      console.error('Error al enviar formulario:', error);
-      // El error se maneja en el nivel superior
-    } finally {
-      // Restaurar botón
-      botonEnviar.disabled = false;
-      textoBoton.textContent = textoOriginal;
-      iconoBoton.textContent = iconoOriginal;
     }
-  },
+
+    // Normalización de campos "lista"
+    const parseList = (raw) => {
+      const s = String(raw || '').trim();
+      if (!s) return [];
+      if (s.startsWith('[')) {
+        try { const arr = JSON.parse(s); return Array.isArray(arr) ? arr : []; } catch { /* ignore */ }
+      }
+      return s.split(',').map(x => x.trim()).filter(Boolean);
+    };
+
+    // Construimos el payload
+    const payload = {
+      id: id || undefined, // importante para update
+      titulo: get('titulo').trim(),
+      letra: get('letra'),
+      acordes: get('acordes'),
+      melodia: get('melodia'),
+      etiquetas: parseList(get('etiquetas')),
+      tono: get('tono'),
+      capo: get('capo'),
+      audios: parseList(get('audios'))
+    };
+
+    // Validaciones mínimas
+    if (!payload.titulo) {
+      notificacionService?.advertencia?.('Título requerido', 'El título no puede estar vacío.');
+      this.form.querySelector?.('[name="titulo"]')?.focus?.();
+      return;
+    }
+
+    if (mode === 'edit') {
+      if (!payload.id) {
+        notificacionService?.advertencia?.(
+          'No hay ID de la canción',
+          'No puedo guardar cambios sin ID. Vuelve a abrir la canción e inténtalo de nuevo.'
+        );
+        return;
+      }
+      // Enviar edición
+      await this.callbacks?.onEditSubmit?.(payload);
+    } else {
+      // Crear nueva
+      await this.callbacks?.onCreateSubmit?.(payload);
+    }
+
+  } catch (err) {
+    console.error('❌ Error en manejarEnvioFormulario:', err);
+    notificacionService?.error?.('No se pudo procesar el formulario. Inténtalo de nuevo.');
+  }
+}
+,
 
   /**
    * Valida todo el formulario usando ValidacionService
@@ -998,71 +1045,96 @@ actualizarPreviewAcordes() {
    * MÉTODO CORREGIDO: Precarga el formulario con los datos de la canción a editar
    * Maneja correctamente las entidades HTML para preservar el contenido original
    */
-  populate(song) {
-    // Limpiar formulario primero
-    this.resetearFormulario();
-    
-    // Función helper para decodificar entidades HTML básicas
-    const decodificarHTML = (texto) => {
-      if (typeof texto !== 'string') return texto;
-      
-      return texto
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#x27;/g, "'")
-        .replace(/&amp;/g, '&'); // Importante: &amp; debe ir al final
+   // Dentro de SongFormView (como método de clase u objeto):
+   populate(datos, modo = 'edit') {
+   try {
+    // 1) Resolver fuente de datos: si estamos en "editar" pero vienen sin id,
+    //    reintenta con la canción actualmente seleccionada en el manager.
+    let source = datos || {};
+    if (modo === 'edit' && (!source.id || source.id === '')) {
+      try {
+        const current = window.app?.songManager?.getCurrentSong?.();
+        if (current && current.id) {
+          // current manda; pero respetamos lo que venga en "datos" si existe
+          source = { ...current, ...source };
+        }
+      } catch (e) {
+        console.warn('No se pudo obtener currentSong del manager:', e);
+      }
+    }
+
+    // 2) Defaults seguros para evitar "undefined" en el formulario
+    const safe = {
+      id:        source.id        ?? '',
+      titulo:    source.titulo    ?? '',
+      letra:     source.letra     ?? '',
+      acordes:   source.acordes   ?? '',
+      melodia:   source.melodia   ?? '',
+      // etiquetas puede venir como array o string; normalizamos a string
+      etiquetas: Array.isArray(source.etiquetas) ? source.etiquetas.join(', ') : (source.etiquetas ?? ''),
+      tono:      source.tono      ?? '',
+      capo:      source.capo      ?? '',
+      // audios puede ser array o string; no lo forzamos si no hay campo
+      audios:    source.audios ?? []
     };
 
-    // Establecer valores - decodificando HTML donde sea necesario
-    this.form.id.value = song.id || '';
-    this.form.titulo.value = song.titulo || '';
-    
-    // CORRECIÓN CLAVE: Decodificar HTML en campos que pueden contenerlo
-    this.form.letra.value = decodificarHTML(song.letra || '');
-    this.form.acordes.value = decodificarHTML(song.acordes || '');
-    this.form.melodia.value = decodificarHTML(song.melodia || '');
-    this.form.audios.value = decodificarHTML(song.audios || '');
-    
-    // Manejar etiquetas tanto como array como string
-    if (Array.isArray(song.tags)) {
-      this.form.etiquetas.value = song.tags.join(', ');
-    } else if (song.etiquetas) {
-      this.form.etiquetas.value = song.etiquetas;
-    } else if (song.tags) {
-      this.form.etiquetas.value = song.tags;
-    }
-    
-    // Actualizar texto del botón
-    const submitText = this.form.querySelector('#submit-text');
-    if (submitText) {
-      submitText.textContent = song.id ? 'Actualizar Canción' : 'Guardar Canción';
+    // 3) Helpers de escritura en inputs / textareas
+    const setVal = (name, value) => {
+      const el = this.form?.querySelector?.(`[name="${name}"]`);
+      if (!el) return;
+      // Checkbox / radio por si acaso (no debería aplicar aquí, pero prevenimos)
+      if (el.type === 'checkbox') {
+        el.checked = Boolean(value);
+      } else if (el.type === 'radio') {
+        const radio = this.form.querySelector(`[name="${name}"][value="${value}"]`);
+        if (radio) radio.checked = true;
+      } else {
+        el.value = value ?? '';
+      }
+    };
+
+    // 4) Volcado de campos conocidos (los que aparecen en tus logs)
+    setVal('id',      safe.id);
+    setVal('titulo',  safe.titulo);
+    setVal('letra',   safe.letra);
+    setVal('acordes', safe.acordes);
+
+    // 5) Volcado opcional si existen esos campos en el formulario
+    setVal('melodia',   safe.melodia);
+    setVal('etiquetas', safe.etiquetas);
+    setVal('tono',      safe.tono);
+    setVal('capo',      safe.capo);
+
+    // 6) Si tienes un campo de audios (textarea o input oculto), escríbelo en JSON o CSV
+    const audiosField = this.form?.querySelector?.('[name="audios"]');
+    if (audiosField) {
+      // Si es textarea/input simple, mejor CSV legible
+      if (Array.isArray(safe.audios)) {
+        audiosField.value = safe.audios.join(', ');
+      } else {
+        audiosField.value = typeof safe.audios === 'string' ? safe.audios : '';
+      }
     }
 
-    // Actualizar contadores de caracteres
-    this.actualizarContadores();
-    
-    // Actualizar previews
-    this.actualizarPreview('etiquetas');
-    this.actualizarPreview('acordes');
-    
-    // Actualizar indicadores
-    this.updateTabIndicators();
-    
-    // Ir a la primera pestaña
-    this.switchToTab('basico');
-    
-    // Marcar datos originales para detectar cambios
-    this.estado.datosOriginales = { ...song };
-    this.estado.cambiosSinGuardar = false;
+    // 7) Marca de modo en el form (útil para tu lógica de guardado)
+    if (this.form) {
+      this.form.dataset.mode = modo;
+    }
 
-    console.log('✅ Formulario cargado con datos decodificados:', {
-      id: song.id,
-      titulo: song.titulo,
-      letra: this.form.letra.value.substring(0, 100) + '...',
-      acordes: this.form.acordes.value.substring(0, 50) + '...'
+    // 8) Log claro (evita el "undefined") para depurar
+    console.log(`✏️ SongFormView.populate(): modo=${modo}`, {
+      id: safe.id,
+      titulo: safe.titulo,
+      fromCurrentSong: (modo === 'edit' && (!datos || !datos.id))
     });
-  },
+
+  } catch (err) {
+    console.error('❌ Error en SongFormView.populate:', err);
+    // Mensaje de usuario si tienes notificador
+    try { window.notificacionService?.error?.('No se pudo cargar el formulario de la canción.'); } catch {}
+  }
+}
+,
 
   /**
    * Actualiza todos los contadores de caracteres

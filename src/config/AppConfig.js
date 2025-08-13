@@ -26,7 +26,7 @@ export const AppConfig = {
 
   // Preferencias UI
   ui: {
-    defaultFontSize: 18, // px para letras
+    defaultFontSize: 16, // px para letras
     defaultNotation: 'EN' // 'EN' o 'ES'
   },
 
@@ -196,12 +196,19 @@ export const getDomainSpecificConfig = () => {
       
     default:
       // Configuración por defecto para dominios no reconocidos
-      console.warn('⚠️ Dominio no reconocido:', hostname);
-      return {
-        name: 'Desconocido',
-        api: { baseUrl: '/intranet3/api/songs', debug: false },
-        features: { debugMode: false }
-      };
+      console.warn('⚠️ Dominio no reconocido:', hostname, '-> uso configuración de PRODUCCIÓN por defecto');
+return {
+  ...AppConfig,
+  api: { ...AppConfig.api, baseUrl: '/intranet2/api/songs' },
+  environment: {
+    isDevelopment: false,
+    hostname,
+    port: location.port || '',
+    protocol: location.protocol,
+    buildTime: new Date().toISOString()
+  },
+  features: { ...AppConfig.features, debugMode: false }
+};
   }
 };
 

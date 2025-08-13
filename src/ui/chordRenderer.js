@@ -44,7 +44,7 @@ export function mostrarAcordesUtilizados(textoAcordes, contenedor) {
   wrapper.className = 'contenedor-acordes';
   
   const titulo = document.createElement('h3');
-  titulo.textContent = 'Acordes usados:';
+  titulo.textContent = 'Acordes de guitarra usados:';
   wrapper.appendChild(titulo);
 
   // NUEVO: Grid container para mejor organización en móvil

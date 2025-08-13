@@ -7,6 +7,34 @@
 declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
+// ------- Carga simple de .env desde la raíz del proyecto
+function load_dotenv_once(): void {
+  static $loaded = false;
+  if ($loaded) return;
+  $root = dirname(__DIR__); // /api/songs -> /api
+  $root = dirname($root);   // /api -> (raíz del proyecto)
+  $envFile = $root . DIRECTORY_SEPARATOR . '.env';
+  if (is_readable($envFile)) {
+    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+      if (strpos(trim($line), '#') === 0) continue;
+      if (!str_contains($line, '=')) continue;
+      list($k, $v) = array_map('trim', explode('=', $line, 2));
+      if ($k === '') continue;
+      // no sobreescribir si ya existe
+      if (getenv($k) !== false) continue;
+      // quitar comillas
+      $v = preg_replace('/^(["\'])(.*)\1$/', '$2', $v);
+      putenv($k . '=' . $v);
+      $_ENV[$k] = $v;
+      $_SERVER[$k] = $v;
+    }
+  }
+  $loaded = true;
+}
+load_dotenv_once();
+
+
 // ------- Helpers de entorno
 function env(string $key, $default = null) {
   $val = getenv($key);
@@ -158,4 +186,30 @@ function db(): PDO {
     json_response(['error' => 'Error de servidor'], 500);
   }
   return $pdo;
+}
+
+
+// ------- Entrada JSON
+function json_input(): array {
+  $raw = file_get_contents('php://input');
+  $in = json_decode($raw ?? '', true);
+  return is_array($in) ? $in : [];
+}
+
+
+// ------- Password admin unificada (acepta varias variables)
+function get_admin_password_clear(): ?string {
+  // Prioridad: en claro -> base64
+  $plain = getenv('ADMIN_PASSWORD');
+  if ($plain !== false && $plain !== '') return (string)$plain;
+
+  $b64 = getenv('ADMIN_PASSWORD_BASE64');
+  if ($b64 === false || $b64 === '') {
+    $b64 = getenv('ADMIN_PASS_BASE64'); // compatibilidad
+  }
+  if ($b64 !== false && $b64 !== '') {
+    $decoded = base64_decode((string)$b64, true);
+    if ($decoded !== false) return $decoded;
+  }
+  return null;
 }

@@ -1,5 +1,5 @@
 // ============================================
-// Archivo: /src/main.js - VERSIÓN FINAL CON CALENDARIO FUNCIONAL
+// Archivo: /src/main.js - VERSIÓN REFACTORIZADA + CALENDARIO FIX
 // ============================================
 
 import { AppController } from './controllers/AppController.js';
@@ -7,50 +7,77 @@ import { getEnvironmentConfig } from './config/AppConfig.js';
 import { appEvents } from './core/EventSystem.js';
 import notificacionService from './services/notificacionService.js';
 
+// FullCalendar (Skypack para evitar bundling)
 import { Calendar } from "https://cdn.skypack.dev/@fullcalendar/core@6.1.8";
 import dayGridPlugin from "https://cdn.skypack.dev/@fullcalendar/daygrid@6.1.8";
 import icalendarPlugin from "https://cdn.skypack.dev/@fullcalendar/icalendar@6.1.8";
-// ---- Calendar config helpers (ICS instead of Google Calendar) ----
+
+// ----------------------------------------------------
+// Helpers de calendario (fuente ICS)
+// ----------------------------------------------------
 function getIcsUrl() {
+  // 1) Prioriza AppConfig si define calendar.icsUrl
   try {
-    const cfg = getEnvironmentConfig?.() || {};
+    const cfg = getEnvironmentConfig?.();
     if (cfg?.calendar?.icsUrl) return cfg.calendar.icsUrl;
-  } catch {}
+  } catch (e) { /* noop */ }
+
+  // 2) Meta tag en el HTML
   const meta = document.querySelector('meta[name="calendar-ics"]');
-  if (meta && meta.content) return meta.content;
-  // Fallback: a local ICS file deployed with the app (place it under /intranet2/assets/calendar.icss)
-  return window.location.origin + window.location.pathname.replace(/\/?[^\/]*$/, '/') + 'assets/calendar.icss';
+  if (meta?.content) return meta.content;
+
+  // 3) Fallback: ICS estático dentro de assets
+  const basePath = window.location.pathname.replace(/\/?[^/]*$/, '/');
+  return `${basePath}assets/calendar.ics`;
 }
 
-
-const config = getEnvironmentConfig();
-
+// ----------------------------------------------------
+// Registro de Service Worker
+// ----------------------------------------------------
 async function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    try {
-      const registro = await navigator.serviceWorker.register('sw.js');
-      console.log('Service Worker registrado exitosamente:', registro);
-      notificacionService.informacion('Aplicación lista', 'Funciona offline y se sincroniza automáticamente');
-    } catch (error) {
-      console.error('Error al registrar Service Worker:', error);
-      notificacionService.advertencia('Modo offline limitado', 'Algunas funciones offline pueden no estar disponibles');
-    }
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/intranet2/sw.js');
+    console.log('Service Worker registrado exitosamente:', reg);
+  } catch (err) {
+    console.warn('No se pudo registrar el Service Worker:', err);
   }
 }
 
+// ----------------------------------------------------
+// Manejo global de errores para UX y depuración
+// ----------------------------------------------------
 function setupGlobalErrorHandling() {
-  window.addEventListener('error', (evento) => {
-    console.error('Error global capturado:', evento.error);
-    notificacionService.error('Error inesperado', 'Se produjo un error. La aplicación puede seguir funcionando.');
-    appEvents.emit('app:error', { error: evento.error, context: 'global' });
+  window.addEventListener('unhandledrejection', (e) => {
+    console.error('Promesa rechazada no manejada:', e.reason || e);
+    try { appEvents.emit?.('ui:modal:error', { error: e.reason || e }); } catch {}
   });
+  window.addEventListener('error', (e) => {
+    console.error('Error global:', e.error || e.message || e);
+  });
+}
 
-  window.addEventListener('unhandledrejection', (evento) => {
-    console.error('Promesa rechazada no manejada:', evento.reason);
-    notificacionService.error('Error de conexión', 'Problema al procesar la solicitud. Revisa tu conexión.');
-    appEvents.emit('app:promise_rejection', { reason: evento.reason });
-    evento.preventDefault();
-  });
+// ----------------------------------------------------
+// App init
+// ----------------------------------------------------
+const cfg = getEnvironmentConfig();
+const config = cfg;
+console.log('🌍 Entorno detectado:', cfg.environment?.isDevelopment ? 'desarrollo' : 'producción');
+console.log('🔗 Hostname:', cfg.environment?.hostname || location.hostname);
+
+let app = null;
+
+// Calendario (instancia única)
+let calendar = null;
+
+function setupAppEvents(appInstance) {
+  // Estado de conexión (si tu AppController ya los emite)
+  appEvents.on?.('app:online', () => console.log('🌐 Aplicación iniciada con conexión'));
+  appEvents.on?.('app:offline', () => console.log('📴 Aplicación en modo offline'));
+
+  // Sync feedback (si SyncManager los emite)
+  appEvents.on?.('sync:complete', () => console.log('🔁 Sincronización OK'));
+  appEvents.on?.('sync:error', (err) => console.error('Error de sincronización:', err?.error || err));
 }
 
 async function initializeApp() {
@@ -58,146 +85,145 @@ async function initializeApp() {
     console.log('🎵 Inicializando Los Salineros...');
     setupGlobalErrorHandling();
     await registerServiceWorker();
-    appEvents.updateConfig(config);
-    const app = new AppController(config);
+
+    // Expone config a EventSystem por si lo usas para feature flags
+    try { appEvents.updateConfig?.(config); } catch {}
+
+    app = new AppController(config);
     setupAppEvents(app);
-    if (config.api.debug) {
+
+    if (config?.api?.debug) {
+      // Facilita depuración en producción
       window.AplicacionSalineros = app;
       window.appEvents = appEvents;
       window.appConfig = config;
     }
+
     console.log('✅ Los Salineros - Aplicación inicializada correctamente');
-  } catch (error) {
-    console.error('❌ Error fatal al inicializar la aplicación:', error);
-    appEvents.emit('app:fatal_error', { error });
-    showFatalError(error);
+  } catch (err) {
+    console.error('💥 Error inicializando la app:', err);
+    notificacionService?.toast?.('Error inicializando la aplicación', { type: 'error' });
+  } finally {
+    console.log('🎉 Aplicación lista para usar');
   }
 }
 
-function setupAppEvents(app) {
-  appEvents.on('app:ready', () => console.log('🎉 Aplicación lista para usar'));
-  appEvents.on('app:error', ({ error, context }) => console.error(`Error en contexto ${context}:`, error));
-  appEvents.on('song:created', ({ song }) => console.log('Nueva canción creada:', song.titulo));
-  appEvents.on('song:updated', ({ song }) => console.log('Canción actualizada:', song.titulo));
-  appEvents.on('song:deleted', ({ id, titulo }) => console.log('Canción eliminada:', titulo));
-  appEvents.on('sync:complete', ({ stats }) => console.log('Sincronización completada:', stats));
-  appEvents.on('sync:error', ({ error }) => console.warn('Error de sincronización:', error));
-}
+// ----------------------------------------------------
+// Calendario: apertura/cierre modal + render fiable
+// ----------------------------------------------------
+function openCalendarModal() {
+  const modal = document.getElementById('calendar-modal');
+  const calendarEl = document.getElementById('fullcalendar');
 
-function showFatalError(error) {
-  const errorContainer = document.createElement('div');
-  errorContainer.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--bg-surface, #1a1a1a);
-    color: var(--text-primary, white);
-    padding: 2rem;
-    border-radius: var(--radius-lg, 12px);
-    text-align: center;
-    z-index: 10000;
-    max-width: 400px;
-    border: 1px solid var(--error, #f44336);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  `;
-  errorContainer.innerHTML = `
-    <h3 style="color: var(--error, #f44336); margin-bottom: 1rem;">🚨 Error de Inicialización</h3>
-    <p style="margin-bottom: 1.5rem;">No se pudo inicializar la aplicación correctamente.</p>
-    <p style="margin-bottom: 2rem; font-size: 0.9rem; opacity: 0.8;">
-      ${config.api.debug ? error.message : 'Por favor, recarga la página o contacta con soporte técnico.'}
-    </p>
-    <button onclick="location.reload()" style="background: var(--accent-primary, #00d4aa); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: var(--radius-md, 8px); cursor: pointer; font-weight: 600;">🔄 Recargar Página</button>
-  `;
-  document.body.appendChild(errorContainer);
-}
+  if (!modal || !calendarEl) {
+    console.warn('No se encontró el modal o el contenedor del calendario.');
+    return;
+  }
 
-function handleResourceErrors() {
-  window.addEventListener('error', (evento) => {
-    if (evento.target !== window) {
-      console.warn('Error al cargar recurso:', evento.target.src || evento.target.href);
-    }
-  });
-}
+  // Mostrar modal
+  modal.classList.add('show');
+  // Emit opcional (solo si tienes registrado el evento)
+  try { appEvents.emit?.('modal:opened', { modal: 'calendar' }); } catch {}
 
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (evento) => {
-    if (['INPUT', 'TEXTAREA'].includes(evento.target.tagName)) return;
-    if ((evento.ctrlKey || evento.metaKey) && evento.key === 'n') {
-      evento.preventDefault();
-      appEvents.emit('ui:shortcut', { action: 'new_song' });
-    }
-    if (evento.key === 'Escape') {
-      appEvents.emit('ui:shortcut', { action: 'escape' });
-    }
-    if ((evento.ctrlKey || evento.metaKey) && evento.key === 'f') {
-      evento.preventDefault();
-      appEvents.emit('ui:shortcut', { action: 'search' });
-    }
-  });
-}
-
-function setupConnectivityMonitoring() {
-  window.addEventListener('online', () => appEvents.emit('connectivity:online'));
-  window.addEventListener('offline', () => appEvents.emit('connectivity:offline'));
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  handleResourceErrors();
-  setupKeyboardShortcuts();
-  setupConnectivityMonitoring();
-  await initializeApp();
-});
-
-export { appEvents, config };
-
-let calendar = null;
-
-// Recalcular tamaños cuando se abre/cierra el modal (💡 añadido)
-appEvents.on('modal:opened', () => {
-  try { calendar?.updateSize(); } catch {}
-});
-appEvents.on('modal:closed', () => {
-  try { calendar?.updateSize(); } catch {}
-});
-
-document.getElementById("open-calendar-btn").addEventListener("click", () => {
-  document.getElementById("calendar-modal").classList.add("show");
-  const calendarEl = document.getElementById("fullcalendar");
-  if (!calendar && calendarEl) {
+  // Crear instancia la primera vez
+  if (!calendar) {
     calendar = new Calendar(calendarEl, {
       plugins: [dayGridPlugin, icalendarPlugin],
-      initialView: "dayGridMonth",
-      height: "100%",
-      locale: "es",
-      timeZone: "Atlantic/Canary",
-      firstDay: 1,
+      initialView: 'dayGridMonth',
+      firstDay: 1,                  // Semana empieza en lunes
+      locale: 'es',
+      timeZone: 'Atlantic/Canary',
+      height: '100%',
       headerToolbar: {
-        left: "prev,next today",
-        center: "title",
-        right: ""
+        left: 'prev,next today',
+        center: 'title',
+        right: ''
       },
-      
-      eventSources: [{ id: 'ics', url: getIcsUrl(), format: 'ics' }]
+      // Fuente ICS
+      eventSources: [
+        {
+          url: getIcsUrl(),
+          format: 'ics',
+          method: 'GET',
+          failure: (error) => {
+            console.error('Error cargando ICS:', error);
+            notificacionService?.toast?.('No se pudo cargar el calendario', { type: 'warning' });
+          }
+        }
+      ],
+      // Comportamiento típico: abrir enlaces del evento en nueva pestaña
+      eventClick: (info) => {
+        if (info.event.url) {
+          info.jsEvent?.preventDefault();
+          window.open(info.event.url, '_blank', 'noopener,noreferrer');
+        }
+      }
     });
-    requestAnimationFrame(() => { calendar.render(); calendar.updateSize(); });
-  } else if (calendar) {
-    calendar.updateSize();
   }
-});
 
-document.getElementById("close-calendar-btn").addEventListener("click", () => {
-  document.getElementById("calendar-modal").classList.remove("show");
-});
+  // El primer pintado a veces sale mal si el modal se acaba de mostrar.
+  // Forzamos render y ajuste de tamaño en el próximo frame.
+  requestAnimationFrame(() => {
+    try { calendar.render(); } catch (e) { console.warn('Calendar render falló:', e); }
+    try { calendar.updateSize(); } catch (e) { /* noop */ }
+  });
+}
 
-// Close calendar modal on Escape and manage focus
+function closeCalendarModal() {
+  const modal = document.getElementById('calendar-modal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  // Emit opcional (solo si tienes registrado el evento)
+  try { appEvents.emit?.('modal:closed', { modal: 'calendar' }); } catch {}
+}
+
+// Resize robusto
+function onWindowResize() {
+  if (!calendar) return;
+  try { calendar.updateSize(); } catch {}
+}
+
+// Accesibilidad: cerrar con Escape
 function handleCalendarEscClose(e) {
   if (e.key === 'Escape') {
     const modal = document.getElementById('calendar-modal');
     if (modal && modal.classList.contains('show')) {
       const btn = document.getElementById('close-calendar-btn');
-      btn?.click();
+      if (btn) btn.click();
+      else closeCalendarModal();
     }
   }
 }
-window.addEventListener('keydown', handleCalendarEscClose);
+
+// ----------------------------------------------------
+// Listeners de UI (sólo se activan si los elementos existen)
+// ----------------------------------------------------
+function wireUi() {
+  const openBtn = document.getElementById('open-calendar-btn');
+  const closeBtn = document.getElementById('close-calendar-btn');
+
+  if (openBtn) {
+    openBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCalendarModal();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeCalendarModal();
+    });
+  }
+
+  window.addEventListener('resize', onWindowResize);
+  window.addEventListener('keydown', handleCalendarEscClose);
+}
+
+// ----------------------------------------------------
+// Boot
+// ----------------------------------------------------
+document.addEventListener('DOMContentLoaded', async () => {
+  await initializeApp();
+  wireUi();
+});

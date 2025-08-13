@@ -151,6 +151,22 @@ export class AppEvents extends TypedEventEmitter {
 
     // Eventos de configuración
     this.registerEventType('config:updated', { config: 'object' });
+
+    // UI
+    this.registerEventType('ui:filters_updated');
+    this.registerEventType('ui:filters_cleared');
+    this.registerEventType('ui:views_initialized');
+    this.registerEventType('ui:form:open');
+    this.registerEventType('ui:form:close');
+    this.registerEventType('ui:modal:error');
+ 
+    // Modal canción (para integraciones como el calendario)
+    this.registerEventType('modal:opened');
+    this.registerEventType('modal:closed');
+ 
+    // Sync
+    this.registerEventType('sync:complete');
+    this.registerEventType('sync:error', { error: 'object' });
   }
 
   setupMiddleware() {

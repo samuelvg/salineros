@@ -94,6 +94,11 @@
   background-clip: text;
 }
 
+strong {
+  color: rgb(236, 236, 147);           /* amarillo puro */
+  font-weight: 700;      /* asegura negrita por si algún reset la quita */
+}
+
 /* -----------------------------
    Pestañas del modal
    ----------------------------- */

@@ -7,6 +7,11 @@
 // ============================================
 
 export class APIService {
+  static _memCache = new Map();
+  static _cacheGet(key){ const it=this._memCache.get(key); if(!it) return null; if(Date.now()>it.expires){this._memCache.delete(key); return null;} return it.data; }
+  static _cacheSet(key,data,ttl=300000){ this._memCache.set(key,{data,expires:Date.now()+ttl}); }
+  static _cacheInvalidate(pattern=''){ if(!pattern){this._memCache.clear(); return;} for(const k of Array.from(this._memCache.keys())) if(k.includes(pattern)) this._memCache.delete(k); }
+
   // ---- Config/helpers internos --------------------------------------------
 
   // Detección robusta de baseUrl:
@@ -57,7 +62,7 @@ export class APIService {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), APIService.timeoutMs());
     try {
-      const resp = await fetch(url, { credentials: "include", ...options, signal: controller.signal });
+      const resp = await fetch(url, { credentials:'include', ...options, signal: controller.signal });
       return resp;
     } finally {
       clearTimeout(id);
@@ -94,23 +99,29 @@ export class APIService {
 
   // Lista todas las canciones
   static async getAll() {
+    const cacheKey = `${APIService.baseUrl()}/index.php`; const c=this._cacheGet(cacheKey); if(c) return c;
     const url = `${APIService.baseUrl()}/index.php`;
     console.log('Obteniendo todas las canciones...', url);
     const resp = await APIService._fetchWithTimeout(url, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    return APIService.handleResponse(resp);
+    const data = await APIService.handleResponse(resp);
+    this._cacheSet(cacheKey, data, 300000);
+    return data;
   }
 
   // Obtiene actualizaciones desde una fecha ISO (YYYY-MM-DDTHH:mm:ssZ)
   static async getUpdates(sinceISO) {
+    const cacheKey = `${APIService.baseUrl()}/updates.php?since=${sinceISO}`; const c=this._cacheGet(cacheKey); if(c) return c;
     const url = `${APIService.baseUrl()}/updates.php?since=${encodeURIComponent(sinceISO)}`;
     const resp = await APIService._fetchWithTimeout(url, {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
-    return APIService.handleResponse(resp);
+    const data = await APIService.handleResponse(resp);
+    this._cacheSet(cacheKey, data, 30000);
+    return data;
   }
 
   // Crea una canción
@@ -124,6 +135,7 @@ export class APIService {
         body: JSON.stringify(song || {})
       });
       const data = await APIService.handleResponse(resp);
+      APIService._cacheInvalidate('/index.php');
       console.log('Canción creada:', data?.id ?? '(sin id)');
       return data;
     } catch (error) {
@@ -144,6 +156,7 @@ export class APIService {
         body: JSON.stringify(song)
       });
       const data = await APIService.handleResponse(resp);
+      APIService._cacheInvalidate('/index.php');
       console.log('Canción actualizada:', song.id);
       return data;
     } catch (error) {
@@ -164,6 +177,7 @@ export class APIService {
         body: JSON.stringify({ id })
       });
       await APIService.handleResponse(resp);
+      APIService._cacheInvalidate('/index.php');
       console.log('Canción eliminada exitosamente:', id);
       return true;
     } catch (error) {
@@ -171,4 +185,29 @@ export class APIService {
       throw new Error(`Error al eliminar canción ${id}: ${error.message}`);
     }
   }
+
+  // Devuelve cambios desde una fecha ISO (ver /api/songs/updates.php)
+static async fetchUpdates(sinceIso = '') {
+  const url = `${APIService.baseUrl()}/updates.php?since=${encodeURIComponent(sinceIso || '')}`;
+  const resp = await APIService._fetchWithTimeout(url, {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' }
+  });
+  const data = await APIService.handleResponse(resp);
+    // El endpoint devuelve un array de canciones modificadas desde "since".
+  // Para no romper SyncManager (que espera {creadas, modificadas, eliminadas}),
+  // encajamos todo en "modificadas".
+  if (Array.isArray(data)) {
+    return { creadas: [], modificadas: data, eliminadas: [] };
+  }
+  // Si en el futuro devolvemos el objeto ya tipado, lo respetamos:
+  if (data && (data.creadas || data.modificadas || data.eliminadas)) {
+    return {
+      creadas: data.creadas || [],
+      modificadas: data.modificadas || [],
+      eliminadas: data.eliminadas || []
+    };
+  }
+  return { creadas: [], modificadas: [], eliminadas: [] };
+ }
 }

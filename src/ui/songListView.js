@@ -41,12 +41,24 @@ export const SongListView = {
       btn.innerHTML = `
   <span class="song-title">${c.titulo}</span>
 
-  <div class="icon-row">
-    <div class="icon-slot ${c.letra && c.letra.trim() ? '' : 'oculto'}" title="Letra">Letra<br />📝</div>
-    <div class="icon-slot ${c.acordes && c.acordes.trim() ? '' : 'oculto'}" title="Acordes">Acordes<br />🎸</div>
-    <div class="icon-slot ${c.melodia && c.melodia.trim() ? '' : 'oculto'}" title="Melodía">Melodía<br />🎶</div>
-    <div class="icon-slot ${c.audios && c.audios.trim() ? '' : 'oculto'}" title="Audios">Audios<br />🔊</div>
+<div class="icon-row">
+  <div class="icon-slot ${c.letra && c.letra.trim() ? '' : 'oculto'}" title="Letra">
+    <span class="icon" aria-hidden="true">📝</span>
+    <span class="label">Letra</span>
   </div>
+  <div class="icon-slot ${c.acordes && c.acordes.trim() ? '' : 'oculto'}" title="Acordes">
+    <span class="icon" aria-hidden="true">🎸</span>
+    <span class="label">Acordes</span>
+  </div>
+  <div class="icon-slot ${c.melodia && c.melodia.trim() ? '' : 'oculto'}" title="Melodía">
+    <span class="icon" aria-hidden="true">🎶</span>
+    <span class="label">Melodía</span>
+  </div>
+  <div class="icon-slot ${c.audios && c.audios.trim() ? '' : 'oculto'}" title="Audios">
+    <span class="icon" aria-hidden="true">🔊</span>
+    <span class="label">Audios</span>
+  </div>
+</div>
 
   <div class="song-tags">
     ${tags.length
