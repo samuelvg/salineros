@@ -49,7 +49,7 @@ Permite consultar letras, acordes, melodías y audios de forma rápida desde cua
 
 ## 🚀 Instalación y ejecución local
 
-1. Clonar el repositorio:
+Clonar el repositorio:
 git clone https://github.com/tuusuario/los-salineros.git
 
 Configurar entorno:
@@ -69,5 +69,3 @@ Control de CORS restringido a dominios autorizados.
 📅 Licencia
 Este proyecto es de uso interno para Los Salineros.
 Para más información sobre su uso o adaptación, contactar con el equipo desarrollador.
-
-Desarrollado con cariño para mantener viva la música canaria. 🎶
