@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, shrink-to-fit=no">
+  <title>Los Salineros</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/main.css">
+
+  <!-- Estilos de FullCalendar (dayGrid, timeGrid, list) -->
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/index.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/index.min.css" rel="stylesheet">
+
+  <meta name="calendar-ics" content="api/calendar.php">
+</head>
+<body>
+  <!-- Botón flotante Calendario -->
+  <button id="open-calendar-btn" aria-label="Abrir calendario" title="Calendario">📅</button>
+
+  <!-- Modal del calendario -->
+  <div id="calendar-modal" role="dialog" aria-modal="true" aria-labelledby="calendar-title">
+    <div class="calendar-modal-content">
+      <button class="close-button" id="close-calendar-btn" aria-label="Cerrar calendario">&times;</button>
+      <div id="fullcalendar"></div>
+    </div>
+  </div>
+
+  <!-- Título y estructura de la app -->
+  <h1 class="app-title">LOS SALINEROS</h1>
+  <div id="filter-container"></div>
+  <div id="app"></div>
+  <div id="status-bar"></div>
+
+  <!-- Bundle de la aplicación -->
+   <script src="src/lib/raphael-min.js"></script>
+   <script src="src/lib/chord.js"></script>
+   <script src="src/lib/acordes.js"></script>
+   <script src="src/lib/wavesurfer.js"></script>
+
+   <!-- Script principal de tu app -->
+   <script type="module" src="src/main.js"></script>
+ 
+
+  <button id="fab-admin" class="fab-admin" aria-label="Admin" style="display:none">⚙️</button>
+
+<!-- === Modo admin con pulsación larga (desktop + móvil) === -->
+<script type="module">
+  import { AdminMode } from './src/core/AdminMode.js';
+  import { APIService } from './src/services/apiService.js';
+
+  // Base API desde APIService
+  const _apiSongs = APIService.baseUrl();
+  const _apiBase  = _apiSongs.replace(/\/songs$/, '');
+
+  async function promptAdminLoginOrLogout() {
+    if (AdminMode.isEnabled()) {
+      if (confirm('¿Desactivar modo admin?')) {
+        try { await fetch(`${_apiBase}/logout.php`, { method:'POST', credentials:'include' }); } catch {}
+        AdminMode.setEnabled(false);
+        alert('Modo admin desactivado');
+      }
+      return;
+    }
+    const pwd = prompt('Contraseña de administrador');
+    if (!pwd) return;
+    try {
+      const resp = await fetch(`${_apiBase}/auth/login.php`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data?.ok) throw new Error(data?.error || 'Login fallido');
+      AdminMode.setEnabled(true);
+      alert('Modo admin activado');
+    } catch (e) {
+      alert('No autorizado');
+      console.error(e);
+    }
+  }
+
+  // FAB de respaldo (queda oculto por defecto)
+  const btn = document.getElementById('fab-admin');
+  if (btn) btn.addEventListener('click', promptAdminLoginOrLogout);
+
+  // === Pulsación larga en el título: compatible desktop + móvil ===
+  const title = document.querySelector('.app-title');
+  if (title) {
+    const PRESS_MS = 1000;       // duración para long press
+    const MOVE_TOL = 10;        // tolerancia de movimiento
+    let pressTimer = null;
+    let startX = 0, startY = 0;
+
+    // Evitar menú contextual/selección en móvil
+    title.addEventListener('contextmenu', (e) => e.preventDefault(), { passive: false });
+
+    const start = (e) => {
+      // Para ratón, solo botón izquierdo
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      // Coordenadas de inicio
+      startX = e.clientX ?? (e.touches?.[0]?.clientX) ?? 0;
+      startY = e.clientY ?? (e.touches?.[0]?.clientY) ?? 0;
+
+      // Arrancamos temporizador
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        promptAdminLoginOrLogout();
+      }, PRESS_MS);
+    };
+
+    const move = (e) => {
+      if (!pressTimer) return;
+      const x = e.clientX ?? (e.touches?.[0]?.clientX) ?? 0;
+      const y = e.clientY ?? (e.touches?.[0]?.clientY) ?? 0;
+      if (Math.hypot(x - startX, y - startY) > MOVE_TOL) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    const cancel = () => {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    };
+
+    // Pointer Events (cubren mouse + touch + stylus)
+    title.addEventListener('pointerdown', start,  { passive: true });
+    title.addEventListener('pointermove', move,   { passive: true });
+    title.addEventListener('pointerup', cancel,   { passive: true });
+    title.addEventListener('pointercancel', cancel, { passive: true });
+    title.addEventListener('pointerleave', cancel,  { passive: true });
+
+    // Alternativa: triple click/tap rápido
+    let clickCount = 0, lastClick = 0;
+    title.addEventListener('click', () => {
+      const now = Date.now();
+      clickCount = (now - lastClick < 500) ? clickCount + 1 : 1;
+      lastClick = now;
+      if (clickCount >= 3) { promptAdminLoginOrLogout(); clickCount = 0; }
+    });
+  }
+</script>
+
+</body>
+</html>
